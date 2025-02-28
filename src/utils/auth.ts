@@ -17,15 +17,21 @@ export function verifyToken(token: string): any {
   }
 }
 
-// Kita perlu pastikan hasil hash tidak melebihi batas 10 karakter
-// Sebaiknya gunakan fungsi hash yang menghasilkan string pendek atau potong hasilnya
 export async function hashPassword(password: string): Promise<string> {
-  // Karena ada batasan di database hanya 10 karakter
-  // kita gunakan salt rounds yang rendah (5) untuk menghasilkan hash yang lebih pendek
-  // CATATAN: Ini tidak ideal dari segi keamanan, lebih baik jika mengubah skema database
-  return bcrypt.hash(password, 5);
+  return bcrypt.hash(password, 10);
 }
 
-export function comparePassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+export async function comparePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
+  try {
+    // Tambahkan logging untuk debug
+    console.log('Comparing password');
+    const match = await bcrypt.compare(plainPassword, hashedPassword);
+    console.log('Password match:', match);
+    return match;
+  } catch (error) {
+    console.error('Error comparing passwords:', error);
+    // Jika terjadi error pada perbandingan (misalnya format hash tidak valid), 
+    // kita return false sebagai fallback yang aman
+    return false;
+  }
 }

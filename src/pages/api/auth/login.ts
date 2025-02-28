@@ -2,7 +2,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
 import { generateToken, comparePassword } from '../../../utils/auth';
-import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
 
@@ -12,12 +11,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
+  // Tambahkan log untuk debugging
+  console.log("Login request received:", JSON.stringify(req.body));
+  
   const { username, password } = req.body;
   
+  // Validasi input
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username dan password diperlukan' });
+  }
+
   try {
+    // Log untuk debugging
+    console.log("Searching for admin with username:", username);
+    
+    // Cari admin berdasarkan username - gunakan findFirst untuk menghindari error jika username bukan unique field
     const admin = await prisma.admin.findFirst({
       where: { username },
     });
+
+    // Log untuk debugging
+    console.log("Admin found:", admin ? "Yes" : "No");
 
     if (!admin) {
       return res.status(401).json({ error: 'Username atau password tidak valid' });
@@ -25,34 +39,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Verifikasi password
     const isPasswordValid = await comparePassword(password, admin.password);
+    
+    // Log untuk debugging
+    console.log("Password valid:", isPasswordValid ? "Yes" : "No");
+    
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Username atau password tidak valid' });
     }
 
-    // Generate JWT token
+    // Generate token
     const token = generateToken(admin.id);
-    
-    // Update bearer_token di database
-    const bearerToken = uuidv4();
-    await prisma.admin.update({
-      where: { id: admin.id },
-      data: {
-        bearer_token: bearerToken,
-        updated_at: new Date()
-      }
-    });
     
     // Kirim token ke client
     return res.status(200).json({ 
-      token,  // JWT token untuk otorisasi API
-      bearer_token: bearerToken,  // Bearer token yang disimpan di database
+      token,
       admin: {
         id: admin.id,
         username: admin.username
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error("Login error:", error);
     return res.status(500).json({ error: 'Terjadi kesalahan saat login' });
   }
 }
