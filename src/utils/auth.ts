@@ -1,16 +1,15 @@
-// utils/auth.ts
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Gunakan .env untuk production
+const JWT_SECRET = process.env.JWT_SECRET || 'BankAbdi@Secret#Key$ForJWT%Tokens&2025!';
 
 export function generateToken(userId: number): string {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '24h' });
 }
 
-export function verifyToken(token: string): any {
+export function verifyToken(token: string): JwtPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    return jwt.verify(token, JWT_SECRET) as JwtPayload; // type assertion to JwtPayload
   } catch (error) {
     console.error('Error verifying token:', error);
     return null;

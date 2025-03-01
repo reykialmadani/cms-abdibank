@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Head from "next/head";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -23,43 +23,44 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    
+
     try {
       console.log("Mengirim request login dengan data:", { username, password: "***" });
-      
+
       const response = await axios.post('/api/auth/login', { 
         username, 
         password 
       });
-      
+
       console.log("Login berhasil, response:", response.data);
-      
+
       // Simpan token di localStorage
       localStorage.setItem('token', response.data.token);
-      
+
       // Opsional: simpan juga informasi admin
       if (response.data.admin) {
         localStorage.setItem('adminId', response.data.admin.id);
         localStorage.setItem('adminUsername', response.data.admin.username);
       }
-      
+
       // Redirect ke dashboard admin
       router.push('/admin/dashboard');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
-      
+
       // Handle error dengan detail lebih baik
-      if (err.response) {
+      if (err instanceof AxiosError) {
         // Ada response dari server
-        console.error('Error response:', err.response.status, err.response.data);
-        setError(err.response.data?.error || `Error ${err.response.status}: Authentication failed`);
-      } else if (err.request) {
+        console.error('Error response:', err.response?.status, err.response?.data);
+        setError(err.response?.data?.error || `Error ${err.response?.status}: Authentication failed`);
+      } else if (err instanceof Error) {
+        // Error lainnya
+        console.error('Error message:', err.message);
+        setError('Terjadi kesalahan saat login: ' + err.message);
+      } else {
         // Tidak ada response (network issue)
         console.error('No response received');
         setError('Tidak dapat terhubung ke server. Periksa koneksi Anda.');
-      } else {
-        // Error lainnya
-        setError('Terjadi kesalahan saat login: ' + err.message);
       }
     } finally {
       setLoading(false);
@@ -113,7 +114,7 @@ export default function Login() {
               </div>
             </div>
           )}
-          
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label
