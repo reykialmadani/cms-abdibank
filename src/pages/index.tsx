@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Head from "next/head";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import axios, { AxiosError } from "axios";
+import axios, {  } from "axios";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -19,53 +19,54 @@ export default function Login() {
     }
   }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+// Modifikasi handleSubmit pada pages/index.tsx
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    try {
-      console.log("Mengirim request login dengan data:", { username, password: "***" });
+  try {
+    // Log data yang dikirim untuk debugging
+    console.log("Mengirim request login dengan data:", { 
+      username, 
+      passwordLength: password ? password.length : 0
+    });
 
-      const response = await axios.post('/api/auth/login', { 
-        username, 
-        password 
-      });
+    const response = await axios.post('/api/auth/login', { 
+      username, 
+      password 
+    });
 
-      console.log("Login berhasil, response:", response.data);
+    console.log("Login berhasil, response:", response.data);
 
-      // Simpan token di localStorage
-      localStorage.setItem('token', response.data.token);
+    // Simpan token di localStorage
+    localStorage.setItem('token', response.data.token);
 
-      // Opsional: simpan juga informasi admin
-      if (response.data.admin) {
-        localStorage.setItem('adminId', response.data.admin.id);
-        localStorage.setItem('adminUsername', response.data.admin.username);
-      }
-
-      // Redirect ke dashboard admin
-      router.push('/admin/dashboard');
-    } catch (err: unknown) {
-      console.error('Login error:', err);
-
-      // Handle error dengan detail lebih baik
-      if (err instanceof AxiosError) {
-        // Ada response dari server
-        console.error('Error response:', err.response?.status, err.response?.data);
-        setError(err.response?.data?.error || `Error ${err.response?.status}: Authentication failed`);
-      } else if (err instanceof Error) {
-        // Error lainnya
-        console.error('Error message:', err.message);
-        setError('Terjadi kesalahan saat login: ' + err.message);
-      } else {
-        // Tidak ada response (network issue)
-        console.error('No response received');
-        setError('Tidak dapat terhubung ke server. Periksa koneksi Anda.');
-      }
-    } finally {
-      setLoading(false);
+    // Opsional: simpan juga informasi admin
+    if (response.data.admin) {
+      localStorage.setItem('adminId', response.data.admin.id);
+      localStorage.setItem('adminUsername', response.data.admin.username);
     }
-  };
+
+    // Redirect ke dashboard admin
+    router.push('/admin/dashboard');
+  } catch (err: unknown) {
+    console.error('Login error:', err);
+    
+    if (axios.isAxiosError(err)) {
+      console.error('Detail error response:', err.response?.status, err.response?.data);
+      setError(err.response?.data?.error || `Error ${err.response?.status}: Autentikasi gagal`);
+    } else if (err instanceof Error) {
+      console.error('Error message:', err.message);
+      setError('Terjadi kesalahan saat login: ' + err.message);
+    } else {
+      console.error('Unknown error:', err);
+      setError('Tidak dapat terhubung ke server. Periksa koneksi Anda.');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
