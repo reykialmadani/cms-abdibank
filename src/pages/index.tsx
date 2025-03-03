@@ -15,7 +15,7 @@ export default function Login() {
     // Cek jika sudah login (token ada), redirect ke dashboard
     const token = localStorage.getItem('token');
     if (token) {
-      router.push('/admin/dashboard');
+      router.push('/admins/dashboard');
     }
   }, [router]);
 
@@ -49,7 +49,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
 
     // Redirect ke dashboard admin
-    router.push('/admin/dashboard');
+    router.push('/admins/dashboard');
   } catch (err: unknown) {
     console.error('Login error:', err);
     
