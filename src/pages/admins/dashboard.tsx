@@ -1,32 +1,34 @@
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
-import Head from 'next/head';
-import axios from 'axios';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import Head from "next/head";
+import axios from "axios";
 
 export default function Dashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [admin, setAdmin] = useState<{ username: string; id: number } | null>(null);
+  const [admin, setAdmin] = useState<{ username: string; id: number } | null>(
+    null
+  );
 
   useEffect(() => {
     // Cek apakah user sudah login dengan memeriksa token
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
-      router.push('/');
+      router.push("/");
       return;
     }
 
     // Set axios default headers untuk semua request
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
     // Ambil data admin dari localStorage (opsional)
-    const adminId = localStorage.getItem('adminId');
-    const adminUsername = localStorage.getItem('adminUsername');
+    const adminId = localStorage.getItem("adminId");
+    const adminUsername = localStorage.getItem("adminUsername");
 
     if (adminId && adminUsername) {
       setAdmin({
         id: Number(adminId),
-        username: adminUsername
+        username: adminUsername,
       });
       setLoading(false);
     } else {
@@ -38,21 +40,21 @@ export default function Dashboard() {
   const fetchAdminData = async () => {
     try {
       // Ambil ID admin dari token (ini contoh saja, Anda perlu sesuaikan dengan struktur token Anda)
-      const adminId = localStorage.getItem('adminId');
-      
+      const adminId = localStorage.getItem("adminId");
+
       if (!adminId) {
-        throw new Error('Admin ID tidak ditemukan');
+        throw new Error("Admin ID tidak ditemukan");
       }
 
       const response = await axios.get(`/api/admin/${adminId}`);
       setAdmin({
         id: response.data.id,
-        username: response.data.username
+        username: response.data.username,
       });
     } catch (error) {
-      console.error('Error fetching admin data:', error);
+      console.error("Error fetching admin data:", error);
       // Jika terjadi error (misal token tidak valid), redirect ke login
-      router.push('/');
+      router.push("/");
     } finally {
       setLoading(false);
     }
@@ -60,12 +62,12 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     // Hapus token dan data admin dari localStorage
-    localStorage.removeItem('token');
-    localStorage.removeItem('adminId');
-    localStorage.removeItem('adminUsername');
-    
+    localStorage.removeItem("token");
+    localStorage.removeItem("adminId");
+    localStorage.removeItem("adminUsername");
+
     // Redirect ke login page
-    router.push('/');
+    router.push("/");
   };
 
   if (loading) {
@@ -92,7 +94,9 @@ export default function Dashboard() {
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
                 {/* Logo or Brand */}
-                <span className="text-xl font-bold text-blue-600">Bank ABDI Admin</span>
+                <span className="text-xl font-bold text-blue-600">
+                  Bank ABDI Admin
+                </span>
               </div>
             </div>
             <div className="flex items-center">
@@ -122,8 +126,11 @@ export default function Dashboard() {
           <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div className="px-4 py-8 sm:px-0">
               <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 p-4">
-                <p className="text-gray-500">Konten dashboard Anda di sini. Tambahkan komponen dan fitur sesuai kebutuhan.</p>
-                
+                <p className="text-gray-500">
+                  Konten dashboard Anda di sini. Tambahkan komponen dan fitur
+                  sesuai kebutuhan.
+                </p>
+
                 {/* Contoh card untuk fitur-fitur */}
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -138,6 +145,7 @@ export default function Dashboard() {
                     <div className="bg-gray-50 px-4 py-4 sm:px-6">
                       <button
                         type="button"
+                        onClick={() => router.push("/admins/content/create")}
                         className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
                         Buka Manager
