@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, sub_menu } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -20,7 +20,7 @@ type ApiResponse<T> = {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ApiResponse<any>>
+  res: NextApiResponse<ApiResponse<sub_menu[] | sub_menu | null>>
 ) {
   if (req.method === 'GET') {
     try {
@@ -29,7 +29,7 @@ export default async function handler(
           order_position: 'asc'
         },
         include: {
-          menu: true // Mengambil data menu yang berelasi
+          menu: true
         }
       })
       res.status(200).json({ data: submenus })
@@ -40,20 +40,19 @@ export default async function handler(
   } else if (req.method === 'POST') {
     try {
       const { menu_id, sub_menu_name, order_position, url, status, updated_by } = req.body as SubMenuCreateInput
-      
+
       if (!menu_id || !sub_menu_name) {
         return res.status(400).json({ error: 'menu_id and sub_menu_name are required' })
       }
-      
-      // Cek apakah menu_id valid
+
       const menuExists = await prisma.menu.findUnique({
         where: { id: menu_id }
       })
-      
+
       if (!menuExists) {
         return res.status(400).json({ error: 'Menu ID tidak valid' })
       }
-      
+
       const newSubmenu = await prisma.sub_menu.create({
         data: {
           menu_id,

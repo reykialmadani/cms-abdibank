@@ -7,16 +7,14 @@ import Image from "next/image";
 
 // Icons
 import {
-    HomeIcon,
-    Bars3Icon as MenuIcon,
-    XMarkIcon as XIcon,
-    DocumentTextIcon,
-    Cog6ToothIcon as CogIcon,
-    ArrowLeftOnRectangleIcon as LogoutIcon,
-    Squares2X2Icon as ViewGridIcon,
-    RectangleStackIcon as CollectionIcon,
-  } from "@heroicons/react/24/outline";
-  
+  HomeIcon,
+  Bars3Icon as MenuIcon,
+  XMarkIcon as XIcon,
+  DocumentTextIcon,
+  ArrowLeftOnRectangleIcon as LogoutIcon,
+  Squares2X2Icon as ViewGridIcon,
+  RectangleStackIcon as CollectionIcon,
+} from "@heroicons/react/24/outline";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -33,6 +31,7 @@ interface NavItem {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [username, setUsername] = useState<string>("");
+  const [contentMenuOpen, setContentMenuOpen] = useState(false); // State untuk kontrol submenu
   const router = useRouter();
 
   // Check authentication on mount
@@ -84,12 +83,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: CollectionIcon,
       current: router.pathname.startsWith("/admins/sub-menu"),
     },
-    {
-      name: "Pengaturan",
-      href: "/admins/settings",
-      icon: CogIcon,
-      current: router.pathname === "/admins/settings",
-    },
   ];
 
   return (
@@ -101,9 +94,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Mobile Sidebar */}
       <div
-        className={`fixed inset-0 flex z-40 md:hidden ${
-          sidebarOpen ? "block" : "hidden"
-        }`}
+        className={`fixed inset-0 flex z-40 md:hidden ${sidebarOpen ? "block" : "hidden"}`}
       >
         {/* Overlay */}
         <div
@@ -136,25 +127,67 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="mt-5 flex-1 h-0 overflow-y-auto">
             <nav className="px-2 space-y-1">
               {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
-                    item.current
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
-                >
-                  <item.icon
-                    className={`mr-4 flex-shrink-0 h-6 w-6 ${
-                      item.current
-                        ? "text-gray-500"
-                        : "text-gray-400 group-hover:text-gray-500"
-                    }`}
-                    aria-hidden="true"
-                  />
-                  {item.name}
-                </Link>
+                <div key={item.name}>
+                  {/* Content dengan submenu */}
+                  {item.name === "Content" ? (
+                    <>
+                      <button
+                        onClick={() => setContentMenuOpen(!contentMenuOpen)}
+                        className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
+                          item.current
+                            ? "bg-gray-100 text-gray-900"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <item.icon
+                          className={`mr-4 flex-shrink-0 h-6 w-6 ${
+                            item.current
+                              ? "text-gray-500"
+                              : "text-gray-400 group-hover:text-gray-500"
+                          }`}
+                          aria-hidden="true"
+                        />
+                        {item.name}
+                      </button>
+                      {contentMenuOpen && (
+                        <div className="ml-8 mt-2 space-y-1">
+                          <Link
+                            href="/admins/content/create" // Ganti dengan route yang sesuai
+                            className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                          >
+                            Create
+                          </Link>
+                          <Link
+                            href="/admins/content/read" // Ganti dengan route yang sesuai
+                            className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                          >
+                            Read
+                          </Link>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
+                        item.current
+                          ? "bg-gray-100 text-gray-900"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <item.icon
+                        className={`mr-4 flex-shrink-0 h-6 w-6 ${
+                          item.current
+                            ? "text-gray-500"
+                            : "text-gray-400 group-hover:text-gray-500"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      {item.name}
+                    </Link>
+                  )}
+                </div>
               ))}
               <button
                 onClick={handleLogout}
@@ -186,25 +219,66 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="mt-5 flex-grow flex flex-col">
             <nav className="flex-1 px-2 pb-4 space-y-1">
               {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                    item.current
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
-                >
-                  <item.icon
-                    className={`mr-3 flex-shrink-0 h-6 w-6 ${
-                      item.current
-                        ? "text-gray-500"
-                        : "text-gray-400 group-hover:text-gray-500"
-                    }`}
-                    aria-hidden="true"
-                  />
-                  {item.name}
-                </Link>
+                <div key={item.name}>
+                  {/* Content dengan submenu */}
+                  {item.name === "Content" ? (
+                    <>
+                      <button
+                        onClick={() => setContentMenuOpen(!contentMenuOpen)}
+                        className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                          item.current
+                            ? "bg-gray-100 text-gray-900"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <item.icon
+                          className={`mr-3 flex-shrink-0 h-6 w-6 ${
+                            item.current
+                              ? "text-gray-500"
+                              : "text-gray-400 group-hover:text-gray-500"
+                          }`}
+                          aria-hidden="true"
+                        />
+                        {item.name}
+                      </button>
+                      {contentMenuOpen && (
+                        <div className="ml-8 mt-2 space-y-1">
+                          <Link
+                            href="/admins/content/create" // Ganti dengan route yang sesuai
+                            className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                          >
+                            Create
+                          </Link>
+                          <Link
+                            href="/admins/content/read" // Ganti dengan route yang sesuai
+                            className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                          >
+                            Read
+                          </Link>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                        item.current
+                          ? "bg-gray-100 text-gray-900"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <item.icon
+                        className={`mr-3 flex-shrink-0 h-6 w-6 ${
+                          item.current
+                            ? "text-gray-500"
+                            : "text-gray-400 group-hover:text-gray-500"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      {item.name}
+                    </Link>
+                  )}
+                </div>
               ))}
               <button
                 onClick={handleLogout}
