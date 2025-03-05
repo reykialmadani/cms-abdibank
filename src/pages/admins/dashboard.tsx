@@ -122,6 +122,7 @@ export default function Dashboard() {
             </h1>
           </div>
         </header>
+        
         <main>
           <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div className="px-4 py-8 sm:px-0">
@@ -156,10 +157,10 @@ export default function Dashboard() {
                   <div className="bg-white overflow-hidden shadow rounded-lg">
                     <div className="px-4 py-5 sm:p-6">
                       <h3 className="text-lg leading-6 font-medium text-gray-900">
-                        Kelola Pinjaman
+                        Kelola Table
                       </h3>
                       <p className="mt-1 text-sm text-gray-500">
-                        Lihat dan kelola data pinjaman.
+                        Lihat dan kelola data table.
                       </p>
                     </div>
                     <div className="bg-gray-50 px-4 py-4 sm:px-6">
@@ -172,7 +173,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                  {/* <div className="bg-white overflow-hidden shadow rounded-lg">
                     <div className="px-4 py-5 sm:p-6">
                       <h3 className="text-lg leading-6 font-medium text-gray-900">
                         Pengaturan Akun
@@ -189,7 +190,8 @@ export default function Dashboard() {
                         Ubah Pengaturan
                       </button>
                     </div>
-                  </div>
+                  </div> */}
+                  
                 </div>
               </div>
             </div>

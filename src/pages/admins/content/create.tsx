@@ -120,66 +120,139 @@ export default function CreateContent() {
   // Handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
+  
     // Validasi form
     if (!validateForm()) {
       return;
     }
-
+  
+    if (!selectedSubMenu) {
+      setError("Sub Menu harus dipilih");
+      return;
+    }
+  
     setLoading(true);
     setError("");
     setSuccess("");
-
-    // Construct FormData untuk upload file
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("required_documents", requiredDocuments);
-    formData.append("status", status.toString());
-
-    if (selectedSubMenu) {
-      formData.append("sub_menu_id", selectedSubMenu.toString());
-    }
-
-    if (thumbnail) {
-      formData.append("thumbnail", thumbnail);
-    }
-
+    setValidationErrors({});
+  
     try {
       const token = localStorage.getItem("token");
-
+  
       if (!token) {
         router.push("/");
         return;
       }
-
-      const response = await axios.get<{ data: SubMenuResponse[] }>(
-        "/api/subMenu",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      const subMenus = response.data; // Now, subMenus contains the fetched data
-      console.log(subMenus); // Example usage
-
-      setSuccess("Content berhasil dibuat!");
-
-      // Redirect ke halaman list content setelah 2 detik
-      setTimeout(() => {
-        router.push("/admins/content/read");
-      }, 2000);
+  
+      // Pendekatan 1: Coba dengan JSON untuk data utama
+      // dan FormData terpisah untuk thumbnail jika perlu
+      const jsonData = {
+        title: title,
+        description: description,
+        required_documents: requiredDocuments,
+        status: status,
+        sub_menu_id: parseInt(selectedSubMenu.toString()) // Pastikan numeric
+      };
+  
+      console.log("Sending JSON data:", jsonData);
+  
+      // Jika tidak ada thumbnail, gunakan JSON request biasa
+      if (!thumbnail) {
+        const response = await axios.post("/api/content", jsonData, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        });
+        
+        console.log("Success with JSON:", response.data);
+        setSuccess("Content berhasil dibuat!");
+        
+        setTimeout(() => {
+          router.push("/admins/content/read");
+        }, 2000);
+      } 
+      // Jika ada thumbnail, gunakan FormData
+      else {
+        // Buat FormData baru
+        const formData = new FormData();
+        
+        // Tambahkan file thumbnail
+        formData.append("thumbnail", thumbnail);
+        
+        // Tambahkan data JSON sebagai string ke field "data"
+        formData.append("data", JSON.stringify(jsonData));
+        
+        console.log("Sending FormData with JSON data field");
+        
+        const response = await axios.post("/api/content", formData, {
+          headers: { 
+            Authorization: `Bearer ${token}`
+            // Biarkan axios mengatur header multipart/form-data sendiri
+          },
+        });
+        
+        console.log("Success with FormData + JSON:", response.data);
+        setSuccess("Content berhasil dibuat!");
+        
+        setTimeout(() => {
+          router.push("/admins/content/read");
+        }, 2000);
+      }
     } catch (err) {
       console.error("Error creating content:", err);
-
-      if (axios.isAxiosError(err)) {
-        // Handle validation errors from server
-        if (err.response?.status === 422 && err.response?.data?.errors) {
+      
+      if (axios.isAxiosError(err) && err.response) {
+        console.error("Error details:", {
+          status: err.response.status,
+          data: err.response.data,
+          headers: err.response.headers
+        });
+        
+        // Pendekatan alternatif jika JSON gagal
+        if (err.response.status === 400) {
+          console.log("JSON approach failed, trying direct FormData...");
+          
+          try {
+            // Buat FormData langsung dengan nilai-nilai primitif
+            const directFormData = new FormData();
+            directFormData.append("title", title);
+            directFormData.append("description", description);
+            directFormData.append("required_documents", requiredDocuments);
+            directFormData.append("status", status.toString());
+            directFormData.append("sub_menu_id", selectedSubMenu.toString());
+            
+            if (thumbnail) {
+              directFormData.append("thumbnail", thumbnail);
+            }
+            
+            // Coba request dengan sub_menu_id sebagai number literal
+            const directResponse = await axios.post("/api/content", directFormData, {
+              headers: { 
+                Authorization: `Bearer ${token}`
+              },
+            });
+            
+            console.log("Success with direct FormData:", directResponse.data);
+            setSuccess("Content berhasil dibuat!");
+            
+            setTimeout(() => {
+              router.push("/admins/content/read");
+            }, 2000);
+            
+            return;
+          } catch (directError) {
+            console.error("Direct FormData also failed:", directError);
+          }
+        }
+        
+        if (err.response.status === 422 && err.response.data?.errors) {
           setValidationErrors(err.response.data.errors);
         } else {
           setError(
-            err.response?.data?.message ||
-              "Terjadi kesalahan saat membuat content"
+            err.response.data?.message || 
+            err.response.data?.error ||
+            "Terjadi kesalahan saat membuat content"
           );
         }
       } else {
@@ -189,6 +262,7 @@ export default function CreateContent() {
       setLoading(false);
     }
   };
+  
 
   return (
     <AdminLayout>

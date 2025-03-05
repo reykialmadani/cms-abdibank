@@ -1,4 +1,4 @@
-// pages/admins/content/create.tsx
+// pages/admins/content/deta.tsx
 import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
