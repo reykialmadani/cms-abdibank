@@ -16,7 +16,17 @@ declare module 'next' {
 
 const prisma = new PrismaClient();
 
-export function authMiddleware(handler: Function) {
+// Menentukan tipe untuk handler function
+type HandlerFunction = (req: NextApiRequest, res: NextApiResponse) => Promise<void> | void;
+
+// Update tipe JwtPayload untuk memastikan 'userId', 'iat', dan 'exp' ada
+interface JwtPayload {
+  userId: number;
+  iat: number;
+  exp: number;
+}
+
+export function authMiddleware(handler: HandlerFunction) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     // Ambil token dari header
     const authHeader = req.headers.authorization;
@@ -29,7 +39,7 @@ export function authMiddleware(handler: Function) {
     const token = authHeader.split(' ')[1];
     
     // Verifikasi token JWT
-    const decoded = verifyToken(token);
+    const decoded = verifyToken(token) as JwtPayload | null; // Cast to JwtPayload
     if (!decoded) {
       return res.status(401).json({ error: 'Token tidak valid atau sudah kadaluarsa' });
     }
@@ -57,7 +67,7 @@ export function authMiddleware(handler: Function) {
 }
 
 // Fungsi alternatif yang menggunakan bearer_token untuk otorisasi
-export function bearerAuthMiddleware(handler: Function) {
+export function bearerAuthMiddleware(handler: HandlerFunction) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     // Ambil token dari header
     const authHeader = req.headers.authorization;
