@@ -22,10 +22,10 @@ interface ValidationErrors {
 }
 
 interface SubMenuResponse {
-    id: number;
-    sub_menu_name: string;
-  }
-  
+  id: number;
+  sub_menu_name: string;
+}
+
 export default function CreateContent() {
   // State untuk form input
   const [title, setTitle] = useState<string>("");
@@ -35,35 +35,37 @@ export default function CreateContent() {
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>("");
   const [status, setStatus] = useState<boolean>(true);
-  
+
   // State untuk dropdown options
   const [subMenuOptions, setSubMenuOptions] = useState<DropdownOption[]>([]);
-  
+
   // State untuk loading, error, dan sukses
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
+
   const router = useRouter();
 
   // Fetch sub menu options dari API saat komponen di-mount
   useEffect(() => {
     const fetchSubMenuOptions = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         if (!token) {
-          router.push('/');
+          router.push("/");
           return;
         }
 
-        const response = await axios.get('/api/subMenu', {
-          headers: { Authorization: `Bearer ${token}` }
+        const response = await axios.get("/api/subMenu", {
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const options = response.data.data.map((subMenu: SubMenuResponse) => ({
           id: subMenu.id,
-          name: subMenu.sub_menu_name
+          name: subMenu.sub_menu_name,
         }));
 
         setSubMenuOptions(options);
@@ -80,17 +82,17 @@ export default function CreateContent() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setThumbnail(file);
-      
+
       // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setThumbnailPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-      
+
       // Reset error jika ada
       if (validationErrors.thumbnail) {
-        setValidationErrors(prev => ({ ...prev, thumbnail: undefined }));
+        setValidationErrors((prev) => ({ ...prev, thumbnail: undefined }));
       }
     }
   };
@@ -98,19 +100,19 @@ export default function CreateContent() {
   // Validasi form sebelum submit
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
-    
+
     if (title.trim().length < 5) {
-        errors.title = "Judul harus minimal 5 karakter";
-      }
-    
+      errors.title = "Judul harus minimal 5 karakter";
+    }
+
     if (!selectedSubMenu) {
       errors.sub_menu_id = "Sub menu harus dipilih";
     }
-    
+
     if (description.trim().length < 20) {
-        errors.description = "Deskripsi harus minimal 20 karakter";
-      }
-    
+      errors.description = "Deskripsi harus minimal 20 karakter";
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -118,62 +120,67 @@ export default function CreateContent() {
   // Handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     // Validasi form
     if (!validateForm()) {
       return;
     }
-    
+
     setLoading(true);
     setError("");
     setSuccess("");
-    
+
     // Construct FormData untuk upload file
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", description);
     formData.append("required_documents", requiredDocuments);
     formData.append("status", status.toString());
-    
+
     if (selectedSubMenu) {
       formData.append("sub_menu_id", selectedSubMenu.toString());
     }
-    
+
     if (thumbnail) {
       formData.append("thumbnail", thumbnail);
     }
-    
+
     try {
-      const token = localStorage.getItem('token');
-      
+      const token = localStorage.getItem("token");
+
       if (!token) {
-        router.push('/');
+        router.push("/");
         return;
       }
-      
-      const response = await axios.get<{ data: SubMenuResponse[] }>('/api/subMenu', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+
+      const response = await axios.get<{ data: SubMenuResponse[] }>(
+        "/api/subMenu",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
       const subMenus = response.data; // Now, subMenus contains the fetched data
       console.log(subMenus); // Example usage
-      
+
       setSuccess("Content berhasil dibuat!");
-      
+
       // Redirect ke halaman list content setelah 2 detik
       setTimeout(() => {
-        router.push('/admins/content');
+        router.push("/admins/content/read");
       }, 2000);
-      
     } catch (err) {
       console.error("Error creating content:", err);
-      
+
       if (axios.isAxiosError(err)) {
         // Handle validation errors from server
         if (err.response?.status === 422 && err.response?.data?.errors) {
           setValidationErrors(err.response.data.errors);
         } else {
-          setError(err.response?.data?.message || "Terjadi kesalahan saat membuat content");
+          setError(
+            err.response?.data?.message ||
+              "Terjadi kesalahan saat membuat content"
+          );
         }
       } else {
         setError("Terjadi kesalahan saat menghubungi server");
@@ -188,12 +195,14 @@ export default function CreateContent() {
       <Head>
         <title>Tambah Content Baru - Admin Dashboard</title>
       </Head>
-      
+
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <h1 className="text-2xl font-semibold text-gray-900">Tambah Content Baru</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Tambah Content Baru
+          </h1>
         </div>
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
             {/* Card container */}
@@ -204,8 +213,17 @@ export default function CreateContent() {
                   <div className="mb-4 bg-green-50 border-l-4 border-green-400 p-4">
                     <div className="flex">
                       <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        <svg
+                          className="h-5 w-5 text-green-400"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                       <div className="ml-3">
@@ -214,14 +232,23 @@ export default function CreateContent() {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Error message */}
                 {error && (
                   <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
                     <div className="flex">
                       <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        <svg
+                          className="h-5 w-5 text-red-400"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                       <div className="ml-3">
@@ -230,21 +257,30 @@ export default function CreateContent() {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Sub Menu Dropdown */}
                   <div>
-                    <label htmlFor="subMenu" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="subMenu"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       Sub Menu
                     </label>
                     <div className="mt-1">
                       <select
                         id="subMenu"
                         value={selectedSubMenu || ""}
-                        onChange={(e) => setSelectedSubMenu(e.target.value ? parseInt(e.target.value) : null)}
-                        className={`block w-full px-3 py-2 border ${
-                          validationErrors.sub_menu_id ? 'border-red-300' : 'border-gray-300'
+                        onChange={(e) =>
+                          setSelectedSubMenu(
+                            e.target.value ? parseInt(e.target.value) : null
+                          )
+                        }
+                        className={`text-black block w-full px-3 py-2 border ${
+                          validationErrors.sub_menu_id
+                            ? "border-red-300"
+                            : "border-gray-300"
                         } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                       >
                         <option value="">Pilih Sub Menu</option>
@@ -255,14 +291,19 @@ export default function CreateContent() {
                         ))}
                       </select>
                       {validationErrors.sub_menu_id && (
-                        <p className="mt-2 text-sm text-red-600">{validationErrors.sub_menu_id}</p>
+                        <p className="mt-2 text-sm text-red-600">
+                          {validationErrors.sub_menu_id}
+                        </p>
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Title */}
                   <div>
-                    <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="title"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       Judul
                     </label>
                     <div className="mt-1">
@@ -271,20 +312,27 @@ export default function CreateContent() {
                         id="title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className={`block w-full px-3 py-2 border ${
-                          validationErrors.title ? 'border-red-300' : 'border-gray-300'
+                        className={`text-black block w-full px-3 py-2 border ${
+                          validationErrors.title
+                            ? "border-red-300"
+                            : "border-gray-300"
                         } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                         placeholder="Masukkan judul content"
                       />
                       {validationErrors.title && (
-                        <p className="mt-2 text-sm text-red-600">{validationErrors.title}</p>
+                        <p className="mt-2 text-sm text-red-600">
+                          {validationErrors.title}
+                        </p>
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Description */}
                   <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="description"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       Deskripsi
                     </label>
                     <div className="mt-1">
@@ -293,20 +341,27 @@ export default function CreateContent() {
                         rows={4}
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        className={`block w-full px-3 py-2 border ${
-                          validationErrors.description ? 'border-red-300' : 'border-gray-300'
+                        className={`text-black block w-full px-3 py-2 border ${
+                          validationErrors.description
+                            ? "border-red-300"
+                            : "border-gray-300"
                         } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                         placeholder="Masukkan deskripsi"
                       />
                       {validationErrors.description && (
-                        <p className="mt-2 text-sm text-red-600">{validationErrors.description}</p>
+                        <p className="mt-2 text-sm text-red-600">
+                          {validationErrors.description}
+                        </p>
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Required Documents */}
                   <div>
-                    <label htmlFor="requiredDocuments" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="requiredDocuments"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       Dokumen yang Dibutuhkan (opsional)
                     </label>
                     <div className="mt-1">
@@ -315,18 +370,22 @@ export default function CreateContent() {
                         rows={3}
                         value={requiredDocuments}
                         onChange={(e) => setRequiredDocuments(e.target.value)}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="text-black block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         placeholder="Masukkan daftar dokumen yang dibutuhkan"
                       />
                     </div>
                     <p className="mt-2 text-xs text-gray-500">
-                      Daftar dokumen yang diperlukan, pisahkan dengan baris baru.
+                      Daftar dokumen yang diperlukan, pisahkan dengan baris
+                      baru.
                     </p>
                   </div>
-                  
+
                   {/* Thumbnail */}
                   <div>
-                    <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="thumbnail"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       Thumbnail (opsional)
                     </label>
                     <div className="mt-1 flex items-center">
@@ -334,10 +393,14 @@ export default function CreateContent() {
                         <div className="space-y-1 text-center">
                           {thumbnailPreview ? (
                             <div className="mb-3">
-                              <Image 
-                                src={thumbnailPreview} 
-                                alt="Thumbnail preview" 
+                              {/* Use Next.js Image with width and height */}
+                              <Image
+                                src={thumbnailPreview}
+                                alt="Thumbnail preview"
+                                width={128}
+                                height={128}
                                 className="mx-auto h-32 w-auto object-cover"
+                                unoptimized={true} // Important for data URLs or blob URLs
                               />
                             </div>
                           ) : (
@@ -379,10 +442,12 @@ export default function CreateContent() {
                       </div>
                     </div>
                     {validationErrors.thumbnail && (
-                      <p className="mt-2 text-sm text-red-600">{validationErrors.thumbnail}</p>
+                      <p className="mt-2 text-sm text-red-600">
+                        {validationErrors.thumbnail}
+                      </p>
                     )}
                   </div>
-                  
+
                   {/* Status Toggle */}
                   <div className="flex items-start">
                     <div className="flex items-center h-5">
@@ -396,18 +461,23 @@ export default function CreateContent() {
                       />
                     </div>
                     <div className="ml-3 text-sm">
-                      <label htmlFor="status" className="font-medium text-gray-700">
+                      <label
+                        htmlFor="status"
+                        className="font-medium text-gray-700"
+                      >
                         Aktif
                       </label>
-                      <p className="text-gray-500">Content akan ditampilkan jika diaktifkan</p>
+                      <p className="text-gray-500">
+                        Content akan ditampilkan jika diaktifkan
+                      </p>
                     </div>
                   </div>
-                  
+
                   {/* Form Actions */}
                   <div className="flex justify-end space-x-3">
                     <button
                       type="button"
-                      onClick={() => router.push('/admins/content')}
+                      onClick={() => router.push("/admins/content/create")}
                       className="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       Batal

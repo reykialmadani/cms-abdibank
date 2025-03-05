@@ -252,7 +252,7 @@ export default function EditContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="flex items-center mb-4">
             <button
-              onClick={() => router.push('/admins/content')}
+              onClick={() => router.push('/admins/dashboard')}
               className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <ArrowLeftIcon className="h-4 w-4 mr-2" />

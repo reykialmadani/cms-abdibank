@@ -14,7 +14,7 @@ interface DeleteConfirmationModalProps {
 
 export default function DeleteConfirmationModal({
   isOpen,
-  contentId,
+  // contentId,
   contentTitle,
   isLoading,
   error,
@@ -36,7 +36,7 @@ export default function DeleteConfirmationModal({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Dialog.Overlay className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
           </Transition.Child>
 
           {/* This element is to trick the browser into centering the modal contents. */}
@@ -66,7 +66,7 @@ export default function DeleteConfirmationModal({
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
                         Apakah Anda yakin ingin menghapus content{' '}
-                        <span className="font-medium text-gray-700">"{contentTitle}"</span>?
+                        <span className="font-medium text-gray-700">{`"${contentTitle}"`}</span>
                         Tindakan ini tidak dapat dibatalkan.
                       </p>
                     </div>

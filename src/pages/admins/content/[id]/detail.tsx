@@ -1,258 +1,567 @@
-// pages/admins/content/[id]/detail.tsx
-import { useState, useEffect } from "react";
+// pages/admins/content/create.tsx
+import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import Head from "next/head";
-import Link from "next/link";
 import { useRouter } from "next/router";
 import axios from "axios";
 import Image from "next/image";
 import AdminLayout from "@/pages/admins/component/AdminLayout";
-import { ArrowLeftIcon, PencilIcon } from "@heroicons/react/24/outline";
 
-// Interface for content detail
-interface ContentDetail {
+// Interface untuk menu dan sub menu options
+interface MenuOption {
   id: number;
-  title: string;
-  description: string;
-  required_documents: string | null;
-  thumbnail: string | null;
-  status: boolean;
-  created_at: string;
-  updated_at: string;
-  sub_menu_id: number;
-  sub_menu_name: string;
   menu_name: string;
 }
 
-export default function ContentDetail() {
-  // State for content detail
-  const [content, setContent] = useState<ContentDetail | null>(null);
+interface SubMenuOption {
+  id: number;
+  name: string;
+  menu_id: number;
+}
+
+// Interface untuk error validasi
+interface ValidationErrors {
+  menu_id?: string;
+  sub_menu_id?: string;
+  title?: string;
+  description?: string;
+  required_documents?: string;
+  thumbnail?: string;
+}
+
+interface SubMenuResponse {
+  id: number;
+  sub_menu_name: string;
+  menu_id: number;
+}
+
+interface MenuResponse {
+  id: number;
+  menu_name: string;
+}
   
-  // State for loading and error
-  const [loading, setLoading] = useState<boolean>(true);
+export default function CreateContent() {
+  // State untuk form input
+  const [title, setTitle] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [requiredDocuments, setRequiredDocuments] = useState<string>("");
+  const [selectedMenu, setSelectedMenu] = useState<number | null>(null);
+  const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>("");
+  const [status, setStatus] = useState<boolean>(true);
+  
+  // State untuk dropdown options
+  const [menuOptions, setMenuOptions] = useState<MenuOption[]>([]);
+  const [allSubMenuOptions, setAllSubMenuOptions] = useState<SubMenuOption[]>([]);
+  const [filteredSubMenuOptions, setFilteredSubMenuOptions] = useState<SubMenuOption[]>([]);
+  
+  // State untuk loading, error, dan sukses
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   
   const router = useRouter();
-  const { id } = router.query;
 
-  // Fetch content detail from API
+  // Fetch menu options dari API saat komponen di-mount
   useEffect(() => {
-    const fetchContentDetail = async () => {
-      if (!id) return;
-      
+    const fetchMenuOptions = async () => {
       try {
-        setLoading(true);
-        setError("");
-        
         const token = localStorage.getItem('token');
         if (!token) {
           router.push('/');
           return;
         }
 
-        const response = await axios.get(`/api/content/${id}`, {
+        const response = await axios.get('/api/menu', {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        setContent(response.data.data);
+        const options = response.data.data.map((menu: MenuResponse) => ({
+          id: menu.id,
+          menu_name: menu.menu_name
+        }));
+
+        setMenuOptions(options);
       } catch (err) {
-        console.error("Error fetching content detail:", err);
-        setError("Terjadi kesalahan saat mengambil detail content");
-      } finally {
-        setLoading(false);
+        console.error("Error fetching menu options:", err);
       }
     };
 
-    fetchContentDetail();
-  }, [id, router]);
+    fetchMenuOptions();
+  }, [router]);
 
-  // Format date
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  // Fetch sub menu options dari API saat komponen di-mount
+  useEffect(() => {
+    const fetchSubMenuOptions = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          router.push('/');
+          return;
+        }
+
+        const response = await axios.get('/api/subMenu', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const options = response.data.data.map((subMenu: SubMenuResponse) => ({
+          id: subMenu.id,
+          name: subMenu.sub_menu_name,
+          menu_id: subMenu.menu_id
+        }));
+
+        setAllSubMenuOptions(options);
+      } catch (err) {
+        console.error("Error fetching sub menu options:", err);
+      }
+    };
+
+    fetchSubMenuOptions();
+  }, [router]);
+
+  // Filter sub menu options berdasarkan menu yang dipilih
+  useEffect(() => {
+    if (selectedMenu) {
+      const filtered = allSubMenuOptions.filter(
+        subMenu => subMenu.menu_id === selectedMenu
+      );
+      setFilteredSubMenuOptions(filtered);
+      
+      // Reset selected sub menu jika tidak ada dalam daftar yang difilter
+      if (selectedSubMenu && !filtered.some(option => option.id === selectedSubMenu)) {
+        setSelectedSubMenu(null);
+      }
+    } else {
+      setFilteredSubMenuOptions([]);
+      setSelectedSubMenu(null);
+    }
+  }, [selectedMenu, allSubMenuOptions, selectedSubMenu]);
+
+  // Handle menu selection change
+  const handleMenuChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const menuId = e.target.value ? parseInt(e.target.value) : null;
+    setSelectedMenu(menuId);
+    
+    // Reset error jika ada
+    if (validationErrors.menu_id) {
+      setValidationErrors(prev => ({ ...prev, menu_id: undefined }));
+    }
   };
 
-  // Parse required documents from string to array
-  const parseRequiredDocuments = (docs: string | null) => {
-    if (!docs) return [];
-    return docs.split('\n').filter(doc => doc.trim() !== '');
+  // Handle sub menu selection change
+  const handleSubMenuChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const subMenuId = e.target.value ? parseInt(e.target.value) : null;
+    setSelectedSubMenu(subMenuId);
+    
+    // Reset error jika ada
+    if (validationErrors.sub_menu_id) {
+      setValidationErrors(prev => ({ ...prev, sub_menu_id: undefined }));
+    }
+  };
+
+  // Handle file upload untuk thumbnail
+  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setThumbnail(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      // Reset error jika ada
+      if (validationErrors.thumbnail) {
+        setValidationErrors(prev => ({ ...prev, thumbnail: undefined }));
+      }
+    }
+  };
+
+  // Validasi form sebelum submit
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+    
+    if (!selectedMenu) {
+      errors.menu_id = "Menu harus dipilih";
+    }
+    
+    if (!selectedSubMenu) {
+      errors.sub_menu_id = "Sub menu harus dipilih";
+    }
+    
+    if (title.trim().length < 5) {
+      errors.title = "Judul harus minimal 5 karakter";
+    }
+    
+    if (description.trim().length < 20) {
+      errors.description = "Deskripsi harus minimal 20 karakter";
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    
+    // Validasi form
+    if (!validateForm()) {
+      return;
+    }
+    
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    
+    // Construct FormData untuk upload file
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    
+    // Tambahkan empty string jika tidak ada required documents
+    formData.append("required_documents", requiredDocuments || "");
+    
+    // Konversi boolean ke string "0" atau "1" untuk API
+    formData.append("status", status ? "1" : "0");
+    
+    // Pastikan sub_menu_id selalu ada
+    if (selectedSubMenu) {
+      formData.append("sub_menu_id", selectedSubMenu.toString());
+    }
+    
+    // Tambahkan menu_id ke form data
+    if (selectedMenu) {
+      formData.append("menu_id", selectedMenu.toString());
+    }
+    
+    // Thumbnail bisa opsional
+    if (thumbnail) {
+      formData.append("thumbnail", thumbnail);
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        router.push('/');
+        return;
+      }
+      
+      // Coba dengan endpoint yang berbeda - cek dari Network tab di browser
+      await axios.post('/api/content/store', formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      setSuccess("Content berhasil dibuat!");
+      
+      // Redirect ke halaman list content setelah 2 detik
+      setTimeout(() => {
+        router.push('/admins/content/read');
+      }, 2000);
+      
+    } catch (err) {
+      console.error("Error creating content:", err);
+      
+      if (axios.isAxiosError(err)) {
+        // Tampilkan error response untuk debugging
+        console.log('Error response:', err.response?.data);
+        
+        // Handle validation errors from server
+        if (err.response?.status === 422 && err.response?.data?.errors) {
+          setValidationErrors(err.response.data.errors);
+        } else {
+          setError(err.response?.data?.message || "Terjadi kesalahan saat membuat content");
+        }
+      } else {
+        setError("Terjadi kesalahan saat menghubungi server");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <AdminLayout>
       <Head>
-        <title>{loading ? 'Loading...' : content ? `Detail ${content.title}` : 'Content Not Found'} - Admin Dashboard</title>
+        <title>Tambah Content Baru - Admin Dashboard</title>
       </Head>
       
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <div className="flex items-center mb-4">
-            <button
-              onClick={() => router.push('/admins/content')}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <ArrowLeftIcon className="h-4 w-4 mr-2" />
-              Kembali
-            </button>
-            
-            {!loading && content && (
-              <div className="ml-auto">
-                <Link
-                  href={`/admins/content/${id}/edit`}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <PencilIcon className="h-4 w-4 mr-2" />
-                  Edit
-                </Link>
-              </div>
-            )}
-          </div>
-          
-          <h1 className="text-2xl font-semibold text-gray-900">Detail Content</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Tambah Content Baru</h1>
         </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
-            {/* Error message */}
-            {error && (
-              <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
+            {/* Card container */}
+            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                {/* Success message */}
+                {success && (
+                  <div className="mb-4 bg-green-50 border-l-4 border-green-400 p-4">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-green-700">{success}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-red-700">{error}</p>
+                )}
+                
+                {/* Error message */}
+                {error && (
+                  <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-red-700">{error}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Loading state */}
-            {loading ? (
-              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                <div className="px-4 py-5 sm:px-6">
-                  <div className="animate-pulse h-6 w-1/3 bg-gray-200 rounded"></div>
-                </div>
-                <div className="border-t border-gray-200">
-                  <dl>
-                    {Array(5).fill(0).map((_, index) => (
-                      <div key={index} className={`px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
-                        <div className="animate-pulse h-4 w-1/2 bg-gray-200 rounded"></div>
-                        <div className="mt-1 sm:mt-0 sm:col-span-2">
-                          <div className="animate-pulse h-4 w-3/4 bg-gray-200 rounded"></div>
+                )}
+                
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Menu Dropdown */}
+                  <div>
+                    <label htmlFor="menu" className="block text-sm font-medium text-gray-700">
+                      Menu
+                    </label>
+                    <div className="mt-1">
+                      <select
+                        id="menu"
+                        value={selectedMenu || ""}
+                        onChange={handleMenuChange}
+                        className={`text-black block w-full px-3 py-2 border ${
+                          validationErrors.menu_id ? 'border-red-300' : 'border-gray-300'
+                        } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                      >
+                        <option value="">Pilih Menu</option>
+                        {menuOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.menu_name}
+                          </option>
+                        ))}
+                      </select>
+                      {validationErrors.menu_id && (
+                        <p className="mt-2 text-sm text-red-600">{validationErrors.menu_id}</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Sub Menu Dropdown */}
+                  <div>
+                    <label htmlFor="subMenu" className="block text-sm font-medium text-gray-700">
+                      Sub Menu
+                    </label>
+                    <div className="mt-1">
+                      <select
+                        id="subMenu"
+                        value={selectedSubMenu || ""}
+                        onChange={handleSubMenuChange}
+                        className={`text-black block w-full px-3 py-2 border ${
+                          validationErrors.sub_menu_id ? 'border-red-300' : 'border-gray-300'
+                        } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                        disabled={!selectedMenu}
+                      >
+                        <option value="">Pilih Sub Menu</option>
+                        {filteredSubMenuOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.name}
+                          </option>
+                        ))}
+                      </select>
+                      {validationErrors.sub_menu_id && (
+                        <p className="mt-2 text-sm text-red-600">{validationErrors.sub_menu_id}</p>
+                      )}
+                      {selectedMenu && filteredSubMenuOptions.length === 0 && (
+                        <p className="mt-2 text-sm text-amber-600">
+                          Tidak ada sub menu tersedia untuk menu ini
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Title */}
+                  <div>
+                    <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                      Judul
+                    </label>
+                    <div className="mt-1">
+                      <input
+                        type="text"
+                        id="title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className={`text-black block w-full px-3 py-2 border ${
+                          validationErrors.title ? 'border-red-300' : 'border-gray-300'
+                        } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                        placeholder="Masukkan judul content"
+                      />
+                      {validationErrors.title && (
+                        <p className="mt-2 text-sm text-red-600">{validationErrors.title}</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Description */}
+                  <div>
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                      Deskripsi
+                    </label>
+                    <div className="mt-1">
+                      <textarea
+                        id="description"
+                        rows={4}
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className={`text-black block w-full px-3 py-2 border ${
+                          validationErrors.description ? 'border-red-300' : 'border-gray-300'
+                        } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                        placeholder="Masukkan deskripsi"
+                      />
+                      {validationErrors.description && (
+                        <p className="mt-2 text-sm text-red-600">{validationErrors.description}</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Required Documents */}
+                  <div>
+                    <label htmlFor="requiredDocuments" className="block text-sm font-medium text-gray-700">
+                      Dokumen yang Dibutuhkan (opsional)
+                    </label>
+                    <div className="mt-1">
+                      <textarea
+                        id="requiredDocuments"
+                        rows={3}
+                        value={requiredDocuments}
+                        onChange={(e) => setRequiredDocuments(e.target.value)}
+                        className="text-black block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        placeholder="Masukkan daftar dokumen yang dibutuhkan"
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">
+                      Daftar dokumen yang diperlukan, pisahkan dengan baris baru.
+                    </p>
+                  </div>
+                  
+                  {/* Thumbnail */}
+                  <div>
+                    <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700">
+                      Thumbnail (opsional)
+                    </label>
+                    <div className="mt-1 flex items-center">
+                      <div className="w-full flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                        <div className="space-y-1 text-center">
+                          {thumbnailPreview ? (
+                            <div className="mb-3">
+                              <Image 
+                                src={thumbnailPreview} 
+                                alt="Thumbnail preview" 
+                                className="mx-auto h-32 w-auto object-cover"
+                                width={128}
+                                height={128}
+                              />
+                            </div>
+                          ) : (
+                            <svg
+                              className="mx-auto h-12 w-12 text-gray-400"
+                              stroke="currentColor"
+                              fill="none"
+                              viewBox="0 0 48 48"
+                            >
+                              <path
+                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                strokeWidth={2}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          )}
+                          <div className="flex text-sm text-gray-600">
+                            <label
+                              htmlFor="thumbnail"
+                              className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                            >
+                              <span>Upload gambar</span>
+                              <input
+                                id="thumbnail"
+                                name="thumbnail"
+                                type="file"
+                                accept="image/*"
+                                className="sr-only"
+                                onChange={handleThumbnailChange}
+                              />
+                            </label>
+                            <p className="pl-1">atau seret dan lepas</p>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            PNG, JPG, GIF sampai 2MB
+                          </p>
                         </div>
                       </div>
-                    ))}
-                  </dl>
-                </div>
-              </div>
-            ) : !content ? (
-              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                <div className="px-4 py-5 sm:px-6">
-                  <p className="text-center text-gray-500 py-8">Content tidak ditemukan</p>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                <div className="px-4 py-5 sm:px-6">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">{content.title}</h3>
-                  <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                    {content.menu_name} &gt; {content.sub_menu_name}
-                  </p>
-                </div>
-                <div className="border-t border-gray-200">
-                  <dl>
-                    <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                      <dt className="text-sm font-medium text-gray-500">ID</dt>
-                      <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{content.id}</dd>
                     </div>
-                    <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                      <dt className="text-sm font-medium text-gray-500">Judul</dt>
-                      <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{content.title}</dd>
-                    </div>
-                    <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                      <dt className="text-sm font-medium text-gray-500">Status</dt>
-                      <dd className="mt-1 text-sm sm:mt-0 sm:col-span-2">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            content.status ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {content.status ? "Aktif" : "Tidak Aktif"}
-                        </span>
-                      </dd>
-                    </div>
-                    <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                      <dt className="text-sm font-medium text-gray-500">Kategori</dt>
-                      <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                        {content.menu_name} &gt; {content.sub_menu_name}
-                      </dd>
-                    </div>
-                    <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                      <dt className="text-sm font-medium text-gray-500">Deskripsi</dt>
-                      <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 whitespace-pre-line">
-                        {content.description}
-                      </dd>
-                    </div>
-                    
-                    {content.required_documents && (
-                      <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                        <dt className="text-sm font-medium text-gray-500">Dokumen yang Dibutuhkan</dt>
-                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                          <ul className="border border-gray-200 rounded-md divide-y divide-gray-200">
-                            {parseRequiredDocuments(content.required_documents).map((doc, index) => (
-                              <li key={index} className="pl-3 pr-4 py-3 flex items-center justify-start text-sm">
-                                <svg className="flex-shrink-0 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                                </svg>
-                                <span className="ml-2 flex-1">{doc}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </dd>
-                      </div>
+                    {validationErrors.thumbnail && (
+                      <p className="mt-2 text-sm text-red-600">{validationErrors.thumbnail}</p>
                     )}
-                    
-                    {content.thumbnail && (
-                      <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                        <dt className="text-sm font-medium text-gray-500">Thumbnail</dt>
-                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                          <div className="border border-gray-200 rounded-md overflow-hidden w-48">
-                            <Image 
-                              src={content.thumbnail} 
-                              alt={content.title} 
-                              width={192} 
-                              height={192} 
-                              className="w-full h-auto object-cover"
-                            />
-                          </div>
-                        </dd>
-                      </div>
-                    )}
-                    
-                    <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                      <dt className="text-sm font-medium text-gray-500">Dibuat pada</dt>
-                      <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                        {formatDate(content.created_at)}
-                      </dd>
+                  </div>
+                  
+                  {/* Status Toggle */}
+                  <div className="flex items-start">
+                    <div className="flex items-center h-5">
+                      <input
+                        id="status"
+                        name="status"
+                        type="checkbox"
+                        checked={status}
+                        onChange={(e) => setStatus(e.target.checked)}
+                        className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                      />
                     </div>
-                    <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                      <dt className="text-sm font-medium text-gray-500">Terakhir diperbarui</dt>
-                      <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                        {formatDate(content.updated_at)}
-                      </dd>
+                    <div className="ml-3 text-sm">
+                      <label htmlFor="status" className="font-medium text-gray-700">
+                        Aktif
+                      </label>
+                      <p className="text-gray-500">Content akan ditampilkan jika diaktifkan</p>
                     </div>
-                  </dl>
-                </div>
+                  </div>
+                  
+                  {/* Form Actions */}
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => router.push('/admins/content/read')}
+                      className="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    >
+                      {loading ? "Menyimpan..." : "Simpan"}
+                    </button>
+                  </div>
+                </form>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
