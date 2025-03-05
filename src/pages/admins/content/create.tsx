@@ -1,4 +1,4 @@
-// pages/admins/content/create.tsx
+// Enhancement to pages/admins/content/create.tsx
 import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -26,15 +26,34 @@ interface SubMenuResponse {
   sub_menu_name: string;
 }
 
+// Interface untuk list item
+interface ListItem {
+  id: string;
+  text: string;
+  level: number;
+  children: ListItem[];
+  isExpanded?: boolean;
+}
+
 export default function CreateContent() {
   // State untuk form input
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
+  const [descriptionFormat, setDescriptionFormat] = useState<"paragraph" | "simple-list" | "nested-list">("paragraph");
   const [requiredDocuments, setRequiredDocuments] = useState<string>("");
   const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>("");
   const [status, setStatus] = useState<boolean>(true);
+
+  // State untuk nested list
+  const [listItems, setListItems] = useState<ListItem[]>([
+    { id: "1", text: "", level: 1, children: [] }
+  ]);
+  const [currentListId, setCurrentListId] = useState<number>(2);
+
+  // State untuk preview
+  const [showPreview, setShowPreview] = useState<boolean>(false);
 
   // State untuk dropdown options
   const [subMenuOptions, setSubMenuOptions] = useState<DropdownOption[]>([]);
@@ -43,9 +62,7 @@ export default function CreateContent() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   const router = useRouter();
 
@@ -97,6 +114,242 @@ export default function CreateContent() {
     }
   };
 
+  // Add new list item
+  const addListItem = (parentId: string | null = null, level: number = 1) => {
+    const newId = currentListId.toString();
+    setCurrentListId(prev => prev + 1);
+    
+    if (!parentId) {
+      // Add to root level
+      setListItems([...listItems, { id: newId, text: "", level, children: [] }]);
+    } else {  
+      // Add as child of specified parent
+      const updatedItems = [...listItems];
+      
+      // Helper function to recursively find and update the parent
+      const addChild = (items: ListItem[], parentId: string): boolean => {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].id === parentId) {
+            items[i].children.push({ id: newId, text: "", level: items[i].level + 1, children: [] });
+            items[i].isExpanded = true; 
+            return true;
+          }
+          
+          if (items[i].children.length > 0) {
+            if (addChild(items[i].children, parentId)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+      
+      addChild(updatedItems, parentId);
+      setListItems(updatedItems);
+    }
+  };
+
+  // Remove list item
+  const removeListItem = (id: string) => {
+    // Helper function to recursively filter out the item and its children
+    const filterItems = (items: ListItem[]): ListItem[] => {
+      return items.filter(item => {
+        if (item.id === id) return false;
+        if (item.children.length > 0) {
+          item.children = filterItems(item.children);
+        }
+        return true;
+      });
+    };
+    
+    setListItems(filterItems([...listItems]));
+  };
+
+  // Update list item text
+  const updateListItemText = (id: string, text: string) => {
+    // Helper function to recursively find and update item
+    const updateItem = (items: ListItem[]): ListItem[] => {
+      return items.map(item => {
+        if (item.id === id) {
+          return { ...item, text };
+        }
+        if (item.children.length > 0) {
+          return { ...item, children: updateItem(item.children) };
+        }
+        return item;
+      });
+    };
+    
+    setListItems(updateItem([...listItems]));
+  };
+
+  // Toggle expand/collapse of a list item
+  const toggleExpand = (id: string) => {
+    // Helper function to recursively find and toggle item
+    const toggleItem = (items: ListItem[]): ListItem[] => {
+      return items.map(item => {
+        if (item.id === id) {
+          return { ...item, isExpanded: !item.isExpanded };
+        }
+        if (item.children.length > 0) {
+          return { ...item, children: toggleItem(item.children) };
+        }
+        return item;
+      });
+    };
+    
+    setListItems(toggleItem([...listItems]));
+  };
+
+  // Convert nested list structure to HTML
+  const convertListToHtml = (items: ListItem[]): string => {
+    // Skip empty lists
+    if (items.length === 0 || (items.length === 1 && items[0].text.trim() === '' && items[0].children.length === 0)) {
+      return '';
+    }
+    
+    let html = '<ol class="c">';
+    
+    items.forEach(item => {
+      // Skip empty items
+      if (item.text.trim() === '' && item.children.length === 0) {
+        return;
+      }
+      
+      html += `<li>${item.text.trim()}`;
+      
+      if (item.children.length > 0) {
+        const hasNonEmptyChildren = item.children.some(child => child.text.trim() !== '');
+        
+        if (hasNonEmptyChildren) {
+          html += `<ol class="d">${item.children
+            .filter(child => child.text.trim() !== '')
+            .map(child => `<li>${child.text.trim()}</li>`)
+            .join('')}</ol>`;
+        }
+      }
+      
+      html += '</li>';
+    });
+    
+    html += '</ol>';
+    return html;
+  };
+
+  // Convert nested list structure to description field based on format
+  const generateDescriptionFromList = (): string => {
+    if (descriptionFormat === "nested-list") {
+      return convertListToHtml(listItems);
+    } else if (descriptionFormat === "simple-list") {
+      // Create simple bulleted list
+      let content = "";
+      
+      const processItems = (items: ListItem[], indent: string = "") => {
+        items.forEach(item => {
+          if (item.text.trim()) {
+            content += `${indent}- ${item.text.trim()}\n`;
+          }
+          
+          if (item.children.length > 0) {
+            processItems(item.children, indent + "  ");
+          }
+        });
+      };
+      
+      processItems(listItems);
+      return content;
+    }
+    
+    return description; // Return regular description if not a list
+  };
+
+  // Extract text content from HTML for validation
+  const getTextContentLength = (html: string): number => {
+    // Simple approach: strip HTML tags and count remaining characters
+    const textContent = html.replace(/<[^>]*>/g, '').trim();
+    return textContent.length;
+  };
+
+  // Fungsi untuk menampilkan preview sesuai format
+  const getFormattedPreview = (): JSX.Element => {
+    if (descriptionFormat === "paragraph") {
+      return (
+        <div className="whitespace-pre-wrap">
+          {description}
+        </div>
+      );
+    } else if (descriptionFormat === "simple-list") {
+      const items = description.split(/\n+/).filter(item => item.trim() !== "");
+      return (
+        <ul className="list-disc pl-5">
+          {items.map((item, index) => (
+            <li key={index}>{item.trim().replace(/^-\s*/, '')}</li>
+          ))}
+        </ul>
+      );
+    } else {
+      // Render nested list preview
+      return (
+        <div 
+          className="nested-list-preview" 
+          dangerouslySetInnerHTML={{ __html: convertListToHtml(listItems) }}
+        />
+      );
+    }
+  };
+
+  // Recursive component to render list items with proper indentation
+  const renderListItems = (items: ListItem[], indent: number = 0) => {
+    return items.map(item => (
+      <div key={item.id}>
+        <div className="flex items-center mb-2" style={{ marginLeft: `${indent * 20}px` }}>
+          <div className="flex-grow flex items-center">
+            {item.children.length > 0 && (
+              <button
+                type="button"
+                onClick={() => toggleExpand(item.id)}
+                className="mr-2 text-gray-500 focus:outline-none"
+              >
+                {item.isExpanded ? '▼' : '►'}
+              </button>
+            )}
+            <input
+              type="text"
+              value={item.text}
+              onChange={(e) => updateListItemText(item.id, e.target.value)}
+              className="flex-grow p-2 border border-gray-300 rounded-md text-sm"
+              placeholder={`Level ${item.level} item...`}
+            />
+          </div>
+          <div className="ml-2 flex">
+            <button
+              type="button"
+              onClick={() => addListItem(item.id, item.level + 1)}
+              className="p-1 bg-blue-100 text-blue-600 rounded-md mr-1 text-xs"
+              title="Add child item"
+            >
+              + Sub
+            </button>
+            <button
+              type="button"
+              onClick={() => removeListItem(item.id)}
+              className="p-1 bg-red-100 text-red-600 rounded-md text-xs"
+              title="Remove item"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+        
+        {item.children.length > 0 && item.isExpanded && (
+          <div className="ml-4">
+            {renderListItems(item.children, indent + 1)}
+          </div>
+        )}
+      </div>
+    ));
+  };
+
   // Validasi form sebelum submit
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
@@ -109,7 +362,13 @@ export default function CreateContent() {
       errors.sub_menu_id = "Sub menu harus dipilih";
     }
 
-    if (description.trim().length < 20) {
+    // For nested list, validate total content length
+    if (descriptionFormat === "nested-list") {
+      const htmlContent = convertListToHtml(listItems);
+      if (getTextContentLength(htmlContent) < 20) {
+        errors.description = "Deskripsi harus minimal 20 karakter";
+      }
+    } else if (description.trim().length < 20) {
       errors.description = "Deskripsi harus minimal 20 karakter";
     }
 
@@ -121,16 +380,92 @@ export default function CreateContent() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
   
-    // Validasi form
-    if (!validateForm()) {
-      return;
+    // Dump the current state for debugging
+    console.log("Form submission state:", {
+      descriptionFormat,
+      title,
+      selectedSubMenu,
+      hasThumbnail: !!thumbnail,
+      status
+    });
+    
+    try {
+      // Format description based on selected type before validation
+      if (descriptionFormat === "nested-list") {
+        const formattedDesc = generateDescriptionFromList();
+        console.log("Generated HTML description:", formattedDesc);
+        
+        // Store temporarily to not affect the UI
+        const tempDescription = formattedDesc;
+        
+        // Check validation with the formatted content
+        if (!validateForm()) {
+          console.log("Validation failed");
+          return;
+        }
+        
+        // If validation passes, use the formatted content
+        const formData = prepareFormData(tempDescription);
+        if (formData) {
+          await submitForm(formData);
+        }
+      } else {
+        // Regular validation and submission
+        if (!validateForm()) {
+          console.log("Validation failed");
+          return;
+        }
+        
+        // For debugging, check if description is properly formatted for simple-list
+        if (descriptionFormat === "simple-list") {
+          console.log("Simple list description:", description);
+        }
+        
+        const formData = prepareFormData(description);
+        if (formData) {
+          await submitForm(formData);
+        }
+      }
+    } catch (err) {
+      console.error("Error in form submission:", err);
+      setError("Terjadi kesalahan saat memproses form");
     }
-  
+  };
+
+  // Prepare form data for submission
+  const prepareFormData = (descriptionContent: string) => {
     if (!selectedSubMenu) {
       setError("Sub Menu harus dipilih");
-      return;
+      return null;
     }
-  
+    
+    console.log("Creating FormData with description content:", {
+      format: descriptionFormat,
+      contentLength: descriptionContent.length,
+      contentPreview: descriptionContent.substring(0, 100)
+    });
+    
+    // Create the form data object - following original implementation pattern
+    const formData = new FormData();
+    
+    // Add all form fields directly
+    formData.append("title", title);
+    formData.append("description", descriptionContent);
+    formData.append("required_documents", requiredDocuments);
+    formData.append("status", status.toString());
+    formData.append("sub_menu_id", selectedSubMenu.toString());
+    
+    if (thumbnail) {
+      formData.append("thumbnail", thumbnail);
+    }
+    
+    return formData;
+  };
+
+  // Submit the form to the API
+  const submitForm = async (formData: FormData | null) => {
+    if (!formData) return;
+    
     setLoading(true);
     setError("");
     setSuccess("");
@@ -143,61 +478,92 @@ export default function CreateContent() {
         router.push("/");
         return;
       }
-  
-      // Pendekatan 1: Coba dengan JSON untuk data utama
-      // dan FormData terpisah untuk thumbnail jika perlu
-      const jsonData = {
-        title: title,
-        description: description,
-        required_documents: requiredDocuments,
-        status: status,
-        sub_menu_id: parseInt(selectedSubMenu.toString()) // Pastikan numeric
-      };
-  
-      console.log("Sending JSON data:", jsonData);
-  
-      // Jika tidak ada thumbnail, gunakan JSON request biasa
-      if (!thumbnail) {
-        const response = await axios.post("/api/content", jsonData, {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-        });
-        
-        console.log("Success with JSON:", response.data);
-        setSuccess("Content berhasil dibuat!");
-        
-        setTimeout(() => {
-          router.push("/admins/content/read");
-        }, 2000);
-      } 
-      // Jika ada thumbnail, gunakan FormData
-      else {
-        // Buat FormData baru
-        const formData = new FormData();
-        
-        // Tambahkan file thumbnail
-        formData.append("thumbnail", thumbnail);
-        
-        // Tambahkan data JSON sebagai string ke field "data"
-        formData.append("data", JSON.stringify(jsonData));
-        
-        console.log("Sending FormData with JSON data field");
-        
+      
+      // Debugging - Log formData contents
+      console.log("FormData contents:");
+      for (const pair of (formData as any).entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
+      
+      // Try first with FormData approach
+      try {
+        console.log("Trying FormData approach first...");
         const response = await axios.post("/api/content", formData, {
           headers: { 
             Authorization: `Bearer ${token}`
-            // Biarkan axios mengatur header multipart/form-data sendiri
           },
         });
         
-        console.log("Success with FormData + JSON:", response.data);
+        console.log("Success with FormData:", response.data);
         setSuccess("Content berhasil dibuat!");
         
         setTimeout(() => {
           router.push("/admins/content/read");
         }, 2000);
+        return;
+      } catch (formDataError) {
+        console.error("FormData approach failed:", formDataError);
+        
+        // If FormData approach fails, try JSON approach
+        console.log("Trying JSON approach as fallback...");
+        
+        // Create JSON object from FormData
+        const jsonData: Record<string, any> = {};
+        for (const pair of (formData as any).entries()) {
+          // Skip file uploads for JSON
+          if (pair[0] !== 'thumbnail') {
+            jsonData[pair[0]] = pair[1];
+          }
+        }
+        
+        // Handle sub_menu_id conversion to number if needed
+        if (jsonData.sub_menu_id) {
+          jsonData.sub_menu_id = parseInt(jsonData.sub_menu_id);
+        }
+        
+        // Handle status conversion to boolean if needed
+        if (jsonData.status === 'true') {
+          jsonData.status = true;
+        } else if (jsonData.status === 'false') {
+          jsonData.status = false;
+        }
+        
+        console.log("Sending JSON data:", jsonData);
+        
+        if (!thumbnail) {
+          // If no thumbnail, send JSON only
+          const jsonResponse = await axios.post("/api/content", jsonData, {
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+          });
+          
+          console.log("Success with JSON:", jsonResponse.data);
+          setSuccess("Content berhasil dibuat!");
+          
+          setTimeout(() => {
+            router.push("/admins/content/read");
+          }, 2000);
+        } else {
+          // If there's a thumbnail, try the hybrid approach
+          const hybridFormData = new FormData();
+          hybridFormData.append("thumbnail", thumbnail);
+          hybridFormData.append("data", JSON.stringify(jsonData));
+          
+          const hybridResponse = await axios.post("/api/content", hybridFormData, {
+            headers: { 
+              Authorization: `Bearer ${token}`
+            },
+          });
+          
+          console.log("Success with hybrid approach:", hybridResponse.data);
+          setSuccess("Content berhasil dibuat!");
+          
+          setTimeout(() => {
+            router.push("/admins/content/read");
+          }, 2000);
+        }
       }
     } catch (err) {
       console.error("Error creating content:", err);
@@ -209,41 +575,9 @@ export default function CreateContent() {
           headers: err.response.headers
         });
         
-        // Pendekatan alternatif jika JSON gagal
-        if (err.response.status === 400) {
-          console.log("JSON approach failed, trying direct FormData...");
-          
-          try {
-            // Buat FormData langsung dengan nilai-nilai primitif
-            const directFormData = new FormData();
-            directFormData.append("title", title);
-            directFormData.append("description", description);
-            directFormData.append("required_documents", requiredDocuments);
-            directFormData.append("status", status.toString());
-            directFormData.append("sub_menu_id", selectedSubMenu.toString());
-            
-            if (thumbnail) {
-              directFormData.append("thumbnail", thumbnail);
-            }
-            
-            // Coba request dengan sub_menu_id sebagai number literal
-            const directResponse = await axios.post("/api/content", directFormData, {
-              headers: { 
-                Authorization: `Bearer ${token}`
-              },
-            });
-            
-            console.log("Success with direct FormData:", directResponse.data);
-            setSuccess("Content berhasil dibuat!");
-            
-            setTimeout(() => {
-              router.push("/admins/content/read");
-            }, 2000);
-            
-            return;
-          } catch (directError) {
-            console.error("Direct FormData also failed:", directError);
-          }
+        // Try to extract more detailed error information
+        if (err.response.data && typeof err.response.data === 'object') {
+          console.log("Detailed error response:", JSON.stringify(err.response.data, null, 2));
         }
         
         if (err.response.status === 422 && err.response.data?.errors) {
@@ -263,7 +597,6 @@ export default function CreateContent() {
     }
   };
   
-
   return (
     <AdminLayout>
       <Head>
@@ -401,34 +734,159 @@ export default function CreateContent() {
                     </div>
                   </div>
 
-                  {/* Description */}
+                  {/* Description Format Selection */}
                   <div>
-                    <label
-                      htmlFor="description"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Deskripsi
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Format Deskripsi
                     </label>
-                    <div className="mt-1">
-                      <textarea
-                        id="description"
-                        rows={4}
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className={`text-black block w-full px-3 py-2 border ${
-                          validationErrors.description
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                        placeholder="Masukkan deskripsi"
-                      />
-                      {validationErrors.description && (
-                        <p className="mt-2 text-sm text-red-600">
-                          {validationErrors.description}
-                        </p>
-                      )}
+                    <div className="flex flex-wrap gap-4">
+                      <div className="flex items-center">
+                        <input
+                          id="format-paragraph"
+                          name="description-format"
+                          type="radio"
+                          value="paragraph"
+                          checked={descriptionFormat === "paragraph"}
+                          onChange={() => setDescriptionFormat("paragraph")}
+                          className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+                        />
+                        <label
+                          htmlFor="format-paragraph"
+                          className="ml-2 block text-sm text-gray-700"
+                        >
+                          Paragraf
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          id="format-simple-list"
+                          name="description-format"
+                          type="radio"
+                          value="simple-list"
+                          checked={descriptionFormat === "simple-list"}
+                          onChange={() => setDescriptionFormat("simple-list")}
+                          className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+                        />
+                        <label
+                          htmlFor="format-simple-list"
+                          className="ml-2 block text-sm text-gray-700"
+                        >
+                          Daftar Sederhana
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          id="format-nested-list"
+                          name="description-format"
+                          type="radio"
+                          value="nested-list"
+                          checked={descriptionFormat === "nested-list"}
+                          onChange={() => setDescriptionFormat("nested-list")}
+                          className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+                        />
+                        <label
+                          htmlFor="format-nested-list"
+                          className="ml-2 block text-sm text-gray-700"
+                        >
+                          Daftar Berjenjang
+                        </label>
+                      </div>
                     </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {descriptionFormat === "paragraph" 
+                        ? "Deskripsi akan ditampilkan sebagai paragraf teks." 
+                        : descriptionFormat === "simple-list"
+                          ? "Deskripsi akan diubah menjadi daftar. Pisahkan point dengan baris baru."
+                          : "Deskripsi akan dibuat sebagai daftar berjenjang dengan sub-items."}
+                    </p>
                   </div>
+
+                  {/* Description */}
+                  {descriptionFormat !== "nested-list" ? (
+                    <div>
+                      <label
+                        htmlFor="description"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Deskripsi
+                      </label>
+                      <div className="mt-1">
+                        <textarea
+                          id="description"
+                          rows={4}
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          className={`text-black block w-full px-3 py-2 border ${
+                            validationErrors.description
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                          placeholder={descriptionFormat === "paragraph" 
+                            ? "Masukkan deskripsi dalam bentuk paragraf" 
+                            : "Masukkan deskripsi dalam bentuk poin. Pisahkan dengan baris baru."}
+                        />
+                        {validationErrors.description && (
+                          <p className="mt-2 text-sm text-red-600">
+                            {validationErrors.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Deskripsi Daftar Berjenjang
+                      </label>
+                      <div className="border border-gray-300 rounded-md p-4">
+                        <div className="mb-3 flex justify-between items-center">
+                          <h3 className="text-sm font-medium text-gray-700">Daftar Item</h3>
+                          <button
+                            type="button"
+                            onClick={() => addListItem(null, 1)}
+                            className="px-3 py-1 bg-blue-100 text-blue-600 rounded-md text-sm"
+                          >
+                            + Tambah Item
+                          </button>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          {renderListItems(listItems)}
+                        </div>
+                        
+                        {validationErrors.description && (
+                          <p className="mt-2 text-sm text-red-600">
+                            {validationErrors.description}
+                          </p>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Klik + Sub untuk menambahkan sub-item. Klik ✕ untuk menghapus item.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-2 flex justify-between items-center">
+                    <p className="text-xs text-gray-500">
+                      Minimal 20 karakter.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(!showPreview)}
+                      className="text-sm text-blue-600 hover:text-blue-500"
+                    >
+                      {showPreview ? "Sembunyikan Preview" : "Lihat Preview"}
+                    </button>
+                  </div>
+                  
+                  {/* Description Preview */}
+                  {showPreview && (
+                    <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Preview:</h4>
+                      <div className="text-sm text-gray-800">
+                        {getFormattedPreview()}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Required Documents */}
                   <div>
@@ -467,14 +925,13 @@ export default function CreateContent() {
                         <div className="space-y-1 text-center">
                           {thumbnailPreview ? (
                             <div className="mb-3">
-                              {/* Use Next.js Image with width and height */}
                               <Image
                                 src={thumbnailPreview}
                                 alt="Thumbnail preview"
                                 width={128}
                                 height={128}
                                 className="mx-auto h-32 w-auto object-cover"
-                                unoptimized={true} // Important for data URLs or blob URLs
+                                unoptimized={true}
                               />
                             </div>
                           ) : (
@@ -551,7 +1008,7 @@ export default function CreateContent() {
                   <div className="flex justify-end space-x-3">
                     <button
                       type="button"
-                      onClick={() => router.push("/admins/content/create")}
+                      onClick={() => router.push("/admins/content/read")}
                       className="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       Batal
