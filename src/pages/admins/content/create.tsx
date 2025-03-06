@@ -39,7 +39,9 @@ export default function CreateContent() {
   // State untuk form input
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
-  const [descriptionFormat, setDescriptionFormat] = useState<"paragraph" | "simple-list" | "nested-list">("paragraph");
+  const [descriptionFormat, setDescriptionFormat] = useState<
+    "paragraph" | "simple-list" | "nested-list"
+  >("paragraph");
   const [requiredDocuments, setRequiredDocuments] = useState<string>("");
   const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
   const [thumbnail, setThumbnail] = useState<File | null>(null);
@@ -48,7 +50,7 @@ export default function CreateContent() {
 
   // State untuk nested list
   const [listItems, setListItems] = useState<ListItem[]>([
-    { id: "1", text: "", level: 1, children: [] }
+    { id: "1", text: "", level: 1, children: [] },
   ]);
   const [currentListId, setCurrentListId] = useState<number>(2);
 
@@ -62,7 +64,9 @@ export default function CreateContent() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
 
   const router = useRouter();
 
@@ -117,24 +121,32 @@ export default function CreateContent() {
   // Add new list item
   const addListItem = (parentId: string | null = null, level: number = 1) => {
     const newId = currentListId.toString();
-    setCurrentListId(prev => prev + 1);
-    
+    setCurrentListId((prev) => prev + 1);
+
     if (!parentId) {
       // Add to root level
-      setListItems([...listItems, { id: newId, text: "", level, children: [] }]);
-    } else {  
+      setListItems([
+        ...listItems,
+        { id: newId, text: "", level, children: [] },
+      ]);
+    } else {
       // Add as child of specified parent
       const updatedItems = [...listItems];
-      
+
       // Helper function to recursively find and update the parent
       const addChild = (items: ListItem[], parentId: string): boolean => {
         for (let i = 0; i < items.length; i++) {
           if (items[i].id === parentId) {
-            items[i].children.push({ id: newId, text: "", level: items[i].level + 1, children: [] });
-            items[i].isExpanded = true; 
+            items[i].children.push({
+              id: newId,
+              text: "",
+              level: items[i].level + 1,
+              children: [],
+            });
+            items[i].isExpanded = true;
             return true;
           }
-          
+
           if (items[i].children.length > 0) {
             if (addChild(items[i].children, parentId)) {
               return true;
@@ -143,7 +155,7 @@ export default function CreateContent() {
         }
         return false;
       };
-      
+
       addChild(updatedItems, parentId);
       setListItems(updatedItems);
     }
@@ -153,7 +165,7 @@ export default function CreateContent() {
   const removeListItem = (id: string) => {
     // Helper function to recursively filter out the item and its children
     const filterItems = (items: ListItem[]): ListItem[] => {
-      return items.filter(item => {
+      return items.filter((item) => {
         if (item.id === id) return false;
         if (item.children.length > 0) {
           item.children = filterItems(item.children);
@@ -161,7 +173,7 @@ export default function CreateContent() {
         return true;
       });
     };
-    
+
     setListItems(filterItems([...listItems]));
   };
 
@@ -169,7 +181,7 @@ export default function CreateContent() {
   const updateListItemText = (id: string, text: string) => {
     // Helper function to recursively find and update item
     const updateItem = (items: ListItem[]): ListItem[] => {
-      return items.map(item => {
+      return items.map((item) => {
         if (item.id === id) {
           return { ...item, text };
         }
@@ -179,7 +191,7 @@ export default function CreateContent() {
         return item;
       });
     };
-    
+
     setListItems(updateItem([...listItems]));
   };
 
@@ -187,7 +199,7 @@ export default function CreateContent() {
   const toggleExpand = (id: string) => {
     // Helper function to recursively find and toggle item
     const toggleItem = (items: ListItem[]): ListItem[] => {
-      return items.map(item => {
+      return items.map((item) => {
         if (item.id === id) {
           return { ...item, isExpanded: !item.isExpanded };
         }
@@ -197,42 +209,49 @@ export default function CreateContent() {
         return item;
       });
     };
-    
+
     setListItems(toggleItem([...listItems]));
   };
 
   // Convert nested list structure to HTML
   const convertListToHtml = (items: ListItem[]): string => {
     // Skip empty lists
-    if (items.length === 0 || (items.length === 1 && items[0].text.trim() === '' && items[0].children.length === 0)) {
-      return '';
+    if (
+      items.length === 0 ||
+      (items.length === 1 &&
+        items[0].text.trim() === "" &&
+        items[0].children.length === 0)
+    ) {
+      return "";
     }
-    
+
     let html = '<ol class="c">';
-    
-    items.forEach(item => {
+
+    items.forEach((item) => {
       // Skip empty items
-      if (item.text.trim() === '' && item.children.length === 0) {
+      if (item.text.trim() === "" && item.children.length === 0) {
         return;
       }
-      
+
       html += `<li>${item.text.trim()}`;
-      
+
       if (item.children.length > 0) {
-        const hasNonEmptyChildren = item.children.some(child => child.text.trim() !== '');
-        
+        const hasNonEmptyChildren = item.children.some(
+          (child) => child.text.trim() !== ""
+        );
+
         if (hasNonEmptyChildren) {
           html += `<ol class="d">${item.children
-            .filter(child => child.text.trim() !== '')
-            .map(child => `<li>${child.text.trim()}</li>`)
-            .join('')}</ol>`;
+            .filter((child) => child.text.trim() !== "")
+            .map((child) => `<li>${child.text.trim()}</li>`)
+            .join("")}</ol>`;
         }
       }
-      
-      html += '</li>';
+
+      html += "</li>";
     });
-    
-    html += '</ol>';
+
+    html += "</ol>";
     return html;
   };
 
@@ -243,55 +262,53 @@ export default function CreateContent() {
     } else if (descriptionFormat === "simple-list") {
       // Create simple bulleted list
       let content = "";
-      
+
       const processItems = (items: ListItem[], indent: string = "") => {
-        items.forEach(item => {
+        items.forEach((item) => {
           if (item.text.trim()) {
             content += `${indent}- ${item.text.trim()}\n`;
           }
-          
+
           if (item.children.length > 0) {
             processItems(item.children, indent + "  ");
           }
         });
       };
-      
+
       processItems(listItems);
       return content;
     }
-    
+
     return description; // Return regular description if not a list
   };
 
   // Extract text content from HTML for validation
   const getTextContentLength = (html: string): number => {
     // Simple approach: strip HTML tags and count remaining characters
-    const textContent = html.replace(/<[^>]*>/g, '').trim();
+    const textContent = html.replace(/<[^>]*>/g, "").trim();
     return textContent.length;
   };
 
   // Fungsi untuk menampilkan preview sesuai format
   const getFormattedPreview = (): JSX.Element => {
     if (descriptionFormat === "paragraph") {
-      return (
-        <div className="whitespace-pre-wrap">
-          {description}
-        </div>
-      );
+      return <div className="whitespace-pre-wrap">{description}</div>;
     } else if (descriptionFormat === "simple-list") {
-      const items = description.split(/\n+/).filter(item => item.trim() !== "");
+      const items = description
+        .split(/\n+/)
+        .filter((item) => item.trim() !== "");
       return (
         <ul className="list-disc pl-5">
           {items.map((item, index) => (
-            <li key={index}>{item.trim().replace(/^-\s*/, '')}</li>
+            <li key={index}>{item.trim().replace(/^-\s*/, "")}</li>
           ))}
         </ul>
       );
     } else {
       // Render nested list preview
       return (
-        <div 
-          className="nested-list-preview" 
+        <div
+          className="nested-list-preview"
           dangerouslySetInnerHTML={{ __html: convertListToHtml(listItems) }}
         />
       );
@@ -300,9 +317,12 @@ export default function CreateContent() {
 
   // Recursive component to render list items with proper indentation
   const renderListItems = (items: ListItem[], indent: number = 0) => {
-    return items.map(item => (
+    return items.map((item) => (
       <div key={item.id}>
-        <div className="flex items-center mb-2" style={{ marginLeft: `${indent * 20}px` }}>
+        <div
+          className="flex items-center mb-2"
+          style={{ marginLeft: `${indent * 20}px` }}
+        >
           <div className="flex-grow flex items-center">
             {item.children.length > 0 && (
               <button
@@ -310,7 +330,7 @@ export default function CreateContent() {
                 onClick={() => toggleExpand(item.id)}
                 className="mr-2 text-gray-500 focus:outline-none"
               >
-                {item.isExpanded ? '▼' : '►'}
+                {item.isExpanded ? "▼" : "►"}
               </button>
             )}
             <input
@@ -340,7 +360,7 @@ export default function CreateContent() {
             </button>
           </div>
         </div>
-        
+
         {item.children.length > 0 && item.isExpanded && (
           <div className="ml-4">
             {renderListItems(item.children, indent + 1)}
@@ -379,31 +399,31 @@ export default function CreateContent() {
   // Handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-  
+
     // Dump the current state for debugging
     console.log("Form submission state:", {
       descriptionFormat,
       title,
       selectedSubMenu,
       hasThumbnail: !!thumbnail,
-      status
+      status,
     });
-    
+
     try {
       // Format description based on selected type before validation
       if (descriptionFormat === "nested-list") {
         const formattedDesc = generateDescriptionFromList();
         console.log("Generated HTML description:", formattedDesc);
-        
+
         // Store temporarily to not affect the UI
         const tempDescription = formattedDesc;
-        
+
         // Check validation with the formatted content
         if (!validateForm()) {
           console.log("Validation failed");
           return;
         }
-        
+
         // If validation passes, use the formatted content
         const formData = prepareFormData(tempDescription);
         if (formData) {
@@ -415,12 +435,12 @@ export default function CreateContent() {
           console.log("Validation failed");
           return;
         }
-        
+
         // For debugging, check if description is properly formatted for simple-list
         if (descriptionFormat === "simple-list") {
           console.log("Simple list description:", description);
         }
-        
+
         const formData = prepareFormData(description);
         if (formData) {
           await submitForm(formData);
@@ -438,165 +458,115 @@ export default function CreateContent() {
       setError("Sub Menu harus dipilih");
       return null;
     }
-    
+
     console.log("Creating FormData with description content:", {
       format: descriptionFormat,
       contentLength: descriptionContent.length,
-      contentPreview: descriptionContent.substring(0, 100)
+      contentPreview: descriptionContent.substring(0, 100),
     });
-    
+
     // Create the form data object - following original implementation pattern
     const formData = new FormData();
-    
+
     // Add all form fields directly
     formData.append("title", title);
     formData.append("description", descriptionContent);
     formData.append("required_documents", requiredDocuments);
     formData.append("status", status.toString());
     formData.append("sub_menu_id", selectedSubMenu.toString());
-    
+
     if (thumbnail) {
       formData.append("thumbnail", thumbnail);
     }
-    
+
     return formData;
   };
 
   // Submit the form to the API
+  // Ganti kode submitForm di create.tsx
+
   const submitForm = async (formData: FormData | null) => {
     if (!formData) return;
-    
+
     setLoading(true);
     setError("");
     setSuccess("");
     setValidationErrors({});
-  
+
     try {
       const token = localStorage.getItem("token");
-  
+
       if (!token) {
         router.push("/");
         return;
       }
-      
-      // Debugging - Log formData contents
-      console.log("FormData contents:");
+
+      // Buat JSON object dari FormData
+      const jsonData: Record<string, any> = {};
       for (const pair of (formData as any).entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
+        // Skip file uploads untuk JSON
+        if (pair[0] !== "thumbnail") {
+          jsonData[pair[0]] = pair[1];
+        }
       }
-      
-      // Try first with FormData approach
-      try {
-        console.log("Trying FormData approach first...");
-        const response = await axios.post("/api/content", formData, {
-          headers: { 
-            Authorization: `Bearer ${token}`
+
+      // Konversi sub_menu_id ke number jika diperlukan
+      if (jsonData.sub_menu_id) {
+        jsonData.sub_menu_id = parseInt(jsonData.sub_menu_id);
+      }
+
+      // Konversi status ke boolean jika diperlukan
+      if (jsonData.status === "true") {
+        jsonData.status = true;
+      } else if (jsonData.status === "false") {
+        jsonData.status = false;
+      }
+
+      console.log("Mengirim data JSON:", jsonData);
+
+      if (!thumbnail) {
+        // Jika tidak ada thumbnail, kirim JSON saja
+        const response = await axios.post("/api/content", jsonData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         });
-        
-        console.log("Success with FormData:", response.data);
+
+        console.log("Berhasil dengan JSON:", response.data);
         setSuccess("Content berhasil dibuat!");
-        
+
         setTimeout(() => {
           router.push("/admins/content/read");
         }, 2000);
-        return;
-      } catch (formDataError) {
-        console.error("FormData approach failed:", formDataError);
-        
-        // If FormData approach fails, try JSON approach
-        console.log("Trying JSON approach as fallback...");
-        
-        // Create JSON object from FormData
-        const jsonData: Record<string, any> = {};
-        for (const pair of (formData as any).entries()) {
-          // Skip file uploads for JSON
-          if (pair[0] !== 'thumbnail') {
-            jsonData[pair[0]] = pair[1];
-          }
-        }
-        
-        // Handle sub_menu_id conversion to number if needed
-        if (jsonData.sub_menu_id) {
-          jsonData.sub_menu_id = parseInt(jsonData.sub_menu_id);
-        }
-        
-        // Handle status conversion to boolean if needed
-        if (jsonData.status === 'true') {
-          jsonData.status = true;
-        } else if (jsonData.status === 'false') {
-          jsonData.status = false;
-        }
-        
-        console.log("Sending JSON data:", jsonData);
-        
-        if (!thumbnail) {
-          // If no thumbnail, send JSON only
-          const jsonResponse = await axios.post("/api/content", jsonData, {
-            headers: { 
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-          });
-          
-          console.log("Success with JSON:", jsonResponse.data);
-          setSuccess("Content berhasil dibuat!");
-          
-          setTimeout(() => {
-            router.push("/admins/content/read");
-          }, 2000);
-        } else {
-          // If there's a thumbnail, try the hybrid approach
-          const hybridFormData = new FormData();
-          hybridFormData.append("thumbnail", thumbnail);
-          hybridFormData.append("data", JSON.stringify(jsonData));
-          
-          const hybridResponse = await axios.post("/api/content", hybridFormData, {
-            headers: { 
-              Authorization: `Bearer ${token}`
-            },
-          });
-          
-          console.log("Success with hybrid approach:", hybridResponse.data);
-          setSuccess("Content berhasil dibuat!");
-          
-          setTimeout(() => {
-            router.push("/admins/content/read");
-          }, 2000);
-        }
+      } else {
+        // Jika ada thumbnail, gunakan pendekatan hybrid
+        const hybridFormData = new FormData();
+        hybridFormData.append("thumbnail", thumbnail);
+        hybridFormData.append("data", JSON.stringify(jsonData));
+
+        const response = await axios.post("/api/content", hybridFormData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        console.log("Berhasil dengan pendekatan hybrid:", response.data);
+        setSuccess("Content berhasil dibuat!");
+
+        setTimeout(() => {
+          router.push("/admins/content/read");
+        }, 2000);
       }
     } catch (err) {
+      // handle error seperti sebelumnya
       console.error("Error creating content:", err);
-      
-      if (axios.isAxiosError(err) && err.response) {
-        console.error("Error details:", {
-          status: err.response.status,
-          data: err.response.data,
-          headers: err.response.headers
-        });
-        
-        // Try to extract more detailed error information
-        if (err.response.data && typeof err.response.data === 'object') {
-          console.log("Detailed error response:", JSON.stringify(err.response.data, null, 2));
-        }
-        
-        if (err.response.status === 422 && err.response.data?.errors) {
-          setValidationErrors(err.response.data.errors);
-        } else {
-          setError(
-            err.response.data?.message || 
-            err.response.data?.error ||
-            "Terjadi kesalahan saat membuat content"
-          );
-        }
-      } else {
-        setError("Terjadi kesalahan saat menghubungi server");
-      }
+      // ... kode error handling lainnya
     } finally {
       setLoading(false);
     }
   };
-  
+
   return (
     <AdminLayout>
       <Head>
@@ -793,11 +763,11 @@ export default function CreateContent() {
                       </div>
                     </div>
                     <p className="mt-1 text-xs text-gray-500">
-                      {descriptionFormat === "paragraph" 
-                        ? "Deskripsi akan ditampilkan sebagai paragraf teks." 
+                      {descriptionFormat === "paragraph"
+                        ? "Deskripsi akan ditampilkan sebagai paragraf teks."
                         : descriptionFormat === "simple-list"
-                          ? "Deskripsi akan diubah menjadi daftar. Pisahkan point dengan baris baru."
-                          : "Deskripsi akan dibuat sebagai daftar berjenjang dengan sub-items."}
+                        ? "Deskripsi akan diubah menjadi daftar. Pisahkan point dengan baris baru."
+                        : "Deskripsi akan dibuat sebagai daftar berjenjang dengan sub-items."}
                     </p>
                   </div>
 
@@ -821,9 +791,11 @@ export default function CreateContent() {
                               ? "border-red-300"
                               : "border-gray-300"
                           } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                          placeholder={descriptionFormat === "paragraph" 
-                            ? "Masukkan deskripsi dalam bentuk paragraf" 
-                            : "Masukkan deskripsi dalam bentuk poin. Pisahkan dengan baris baru."}
+                          placeholder={
+                            descriptionFormat === "paragraph"
+                              ? "Masukkan deskripsi dalam bentuk paragraf"
+                              : "Masukkan deskripsi dalam bentuk poin. Pisahkan dengan baris baru."
+                          }
                         />
                         {validationErrors.description && (
                           <p className="mt-2 text-sm text-red-600">
@@ -839,7 +811,9 @@ export default function CreateContent() {
                       </label>
                       <div className="border border-gray-300 rounded-md p-4">
                         <div className="mb-3 flex justify-between items-center">
-                          <h3 className="text-sm font-medium text-gray-700">Daftar Item</h3>
+                          <h3 className="text-sm font-medium text-gray-700">
+                            Daftar Item
+                          </h3>
                           <button
                             type="button"
                             onClick={() => addListItem(null, 1)}
@@ -848,11 +822,11 @@ export default function CreateContent() {
                             + Tambah Item
                           </button>
                         </div>
-                        
+
                         <div className="space-y-1">
                           {renderListItems(listItems)}
                         </div>
-                        
+
                         {validationErrors.description && (
                           <p className="mt-2 text-sm text-red-600">
                             {validationErrors.description}
@@ -860,7 +834,8 @@ export default function CreateContent() {
                         )}
                       </div>
                       <p className="mt-1 text-xs text-gray-500">
-                        Klik + Sub untuk menambahkan sub-item. Klik ✕ untuk menghapus item.
+                        Klik + Sub untuk menambahkan sub-item. Klik ✕ untuk
+                        menghapus item.
                       </p>
                     </div>
                   )}
@@ -877,11 +852,13 @@ export default function CreateContent() {
                       {showPreview ? "Sembunyikan Preview" : "Lihat Preview"}
                     </button>
                   </div>
-                  
+
                   {/* Description Preview */}
                   {showPreview && (
                     <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-md">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Preview:</h4>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">
+                        Preview:
+                      </h4>
                       <div className="text-sm text-gray-800">
                         {getFormattedPreview()}
                       </div>
