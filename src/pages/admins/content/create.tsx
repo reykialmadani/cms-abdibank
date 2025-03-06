@@ -1,8 +1,7 @@
-// pages/admins/content/create.tsx
 import { useState, useEffect, FormEvent } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios"; // Import AxiosResponse type
 import AdminLayout from "@/pages/admins/component/AdminLayout";
 import SubMenuSelector from "@/pages/admins/component/SubMenuSelector";
 import TitleInput from "@/pages/admins/component/TitleInput";
@@ -19,9 +18,7 @@ export default function CreateContent() {
   // State for form inputs
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
-  const [descriptionFormat, setDescriptionFormat] = useState<
-    "paragraph" | "simple-list" | "nested-list"
-  >("paragraph");
+  const [descriptionFormat, setDescriptionFormat] = useState<"paragraph" | "nested-list">("paragraph");
   const [requiredDocuments, setRequiredDocuments] = useState<string>("");
   const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
   const [thumbnail, setThumbnail] = useState<File | null>(null);
@@ -29,9 +26,7 @@ export default function CreateContent() {
   const [status, setStatus] = useState<boolean>(true);
 
   // State for nested list
-  const [listItems, setListItems] = useState<ListItem[]>([
-    { id: "1", text: "", level: 1, children: [] },
-  ]);
+  const [listItems, setListItems] = useState<ListItem[]>([{ id: "1", text: "", level: 1, children: [] }]);
   const [currentListId, setCurrentListId] = useState<number>(2);
 
   // State for preview
@@ -58,11 +53,11 @@ export default function CreateContent() {
           return;
         }
 
-        const response = await axios.get("/api/subMenu", {
+        const response: AxiosResponse<{ data: { id: number; sub_menu_name: string }[] }> = await axios.get("/api/subMenu", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const options = response.data.data.map((subMenu: any) => ({
+        const options = response.data.data.map((subMenu) => ({
           id: subMenu.id,
           name: subMenu.sub_menu_name,
         }));
@@ -166,7 +161,7 @@ export default function CreateContent() {
 
       if (!thumbnail) {
         // If no thumbnail, send JSON only
-        const response = await axios.post("/api/content", jsonData, {
+        await axios.post("/api/content", jsonData, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -184,7 +179,7 @@ export default function CreateContent() {
         hybridFormData.append("thumbnail", thumbnail);
         hybridFormData.append("data", JSON.stringify(jsonData));
 
-        const response = await axios.post("/api/content", hybridFormData, {
+        await axios.post("/api/content", hybridFormData, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
