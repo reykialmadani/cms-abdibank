@@ -10,12 +10,21 @@ const DescriptionFormatSelector: React.FC<DescriptionFormatSelectorProps> = ({
   setDescriptionFormat,
 }) => {
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+    <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+      <h3 className="text-lg font-semibold text-gray-800 mb-3">
         Format Deskripsi
-      </label>
-      <div className="flex flex-wrap gap-4">
-        <div className="flex items-center">
+      </h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        {/* Opsi Paragraf */}
+        <div 
+          className={`flex items-center border rounded-md p-3 cursor-pointer transition-all duration-200 ${
+            descriptionFormat === "paragraph"
+              ? "bg-blue-50 border-blue-500 ring-2 ring-blue-200"
+              : "border-gray-200 hover:bg-gray-50"
+          }`}
+          onClick={() => setDescriptionFormat("paragraph")}
+        >
           <input
             id="format-paragraph"
             name="description-format"
@@ -23,16 +32,30 @@ const DescriptionFormatSelector: React.FC<DescriptionFormatSelectorProps> = ({
             value="paragraph"
             checked={descriptionFormat === "paragraph"}
             onChange={() => setDescriptionFormat("paragraph")}
-            className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+            className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
           />
-          <label
-            htmlFor="format-paragraph"
-            className="ml-2 block text-sm text-gray-700"
-          >
-            Paragraf
-          </label>
+          <div className="ml-3">
+            <label
+              htmlFor="format-paragraph"
+              className="font-medium text-gray-800 cursor-pointer"
+            >
+              Paragraf
+            </label>
+            <p className="text-xs text-gray-500 mt-1">
+              Deskripsi ditampilkan sebagai paragraf teks yang mengalir
+            </p>
+          </div>
         </div>
-        <div className="flex items-center">
+
+        {/* Opsi Daftar Berjenjang */}
+        <div
+          className={`flex items-center border rounded-md p-3 cursor-pointer transition-all duration-200 ${
+            descriptionFormat === "nested-list"
+              ? "bg-blue-50 border-blue-500 ring-2 ring-blue-200"
+              : "border-gray-200 hover:bg-gray-50"
+          }`}
+          onClick={() => setDescriptionFormat("nested-list")}
+        >
           <input
             id="format-nested-list"
             name="description-format"
@@ -40,21 +63,49 @@ const DescriptionFormatSelector: React.FC<DescriptionFormatSelectorProps> = ({
             value="nested-list"
             checked={descriptionFormat === "nested-list"}
             onChange={() => setDescriptionFormat("nested-list")}
-            className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+            className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
           />
-          <label
-            htmlFor="format-nested-list"
-            className="ml-2 block text-sm text-gray-700"
-          >
-            Daftar Berjenjang
-          </label>
+          <div className="ml-3">
+            <label
+              htmlFor="format-nested-list"
+              className="font-medium text-gray-800 cursor-pointer"
+            >
+              Daftar Berjenjang
+            </label>
+            <p className="text-xs text-gray-500 mt-1">
+              Deskripsi distruktur sebagai daftar dengan sub-items terorganisir
+            </p>
+          </div>
         </div>
       </div>
-      <p className="mt-1 text-xs text-gray-500">
-        {descriptionFormat === "paragraph"
-          ? "Deskripsi akan ditampilkan sebagai paragraf teks."
-          : "Deskripsi akan dibuat sebagai daftar berjenjang dengan sub-items."}
-      </p>
+
+      {/* Ilustrasi Preview Format */}
+      <div className="p-3 bg-gray-50 rounded-md border border-gray-200 mt-3">
+        <div className="text-xs font-medium text-gray-500 uppercase mb-2">Preview</div>
+        {descriptionFormat === "paragraph" ? (
+          <div className="h-16 bg-white p-2 rounded border border-gray-200">
+            <div className="w-full h-2 bg-gray-200 rounded mb-1.5"></div>
+            <div className="w-11/12 h-2 bg-gray-200 rounded mb-1.5"></div>
+            <div className="w-full h-2 bg-gray-200 rounded mb-1.5"></div>
+            <div className="w-4/5 h-2 bg-gray-200 rounded"></div>
+          </div>
+        ) : (
+          <div className="h-16 bg-white p-2 rounded border border-gray-200">
+            <div className="flex items-center mb-1.5">
+              <div className="w-2 h-2 rounded-full bg-gray-400 mr-2"></div>
+              <div className="w-4/5 h-2 bg-gray-200 rounded"></div>
+            </div>
+            <div className="flex items-center mb-1.5 ml-4">
+              <div className="w-2 h-2 rounded-full bg-gray-400 mr-2"></div>
+              <div className="w-3/4 h-2 bg-gray-200 rounded"></div>
+            </div>
+            <div className="flex items-center ml-4">
+              <div className="w-2 h-2 rounded-full bg-gray-400 mr-2"></div>
+              <div className="w-2/3 h-2 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

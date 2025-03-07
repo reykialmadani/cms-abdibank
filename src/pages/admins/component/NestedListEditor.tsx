@@ -134,7 +134,7 @@ const NestedListEditor: React.FC<NestedListEditorProps> = ({
               type="text"
               value={item.text}
               onChange={(e) => updateListItemText(item.id, e.target.value)}
-              className="flex-grow p-2 border border-gray-300 rounded-md text-sm"
+              className="flex-grow p-2 border border-gray-300 rounded-md text-sm text-black" // Ensure text is black
               placeholder={`Level ${item.level} item...`}
             />
           </div>
