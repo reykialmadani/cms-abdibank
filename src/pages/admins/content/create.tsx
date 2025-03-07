@@ -8,7 +8,6 @@ import TitleInput from "@/pages/admins/component/TitleInput";
 import DescriptionFormatSelector from "@/pages/admins/component/DescriptionFormatSelector";
 import DescriptionEditor from "@/pages/admins/component/DescriptionEditor";
 import RequiredDocumentsInput from "@/pages/admins/component/RequiredDocumentsInput";
-import ThumbnailUploader from "@/pages/admins/component/ThumbnailUploader";
 import StatusToggle from "@/pages/admins/component/StatusToggle";
 import AlertMessage from "@/pages/admins/component/AlertMessage";
 import { DropdownOption, ValidationErrors, ListItem } from "@/types/content";
@@ -21,8 +20,6 @@ export default function CreateContent() {
   const [descriptionFormat, setDescriptionFormat] = useState<"paragraph" | "nested-list">("paragraph");
   const [requiredDocuments, setRequiredDocuments] = useState<string>("");
   const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
-  const [thumbnail, setThumbnail] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string>("");
   const [status, setStatus] = useState<boolean>(true);
 
   // State for nested list
@@ -104,25 +101,20 @@ export default function CreateContent() {
       return null;
     }
 
-    // Create the form data object
-    const formData = new FormData();
+    // Create the data object
+    const jsonData: Record<string, any> = {
+      title: title,
+      description: descriptionContent,
+      required_documents: requiredDocuments,
+      status: status,
+      sub_menu_id: selectedSubMenu
+    };
 
-    // Add all form fields directly
-    formData.append("title", title);
-    formData.append("description", descriptionContent);
-    formData.append("required_documents", requiredDocuments);
-    formData.append("status", status.toString());
-    formData.append("sub_menu_id", selectedSubMenu.toString());
-
-    if (thumbnail) {
-      formData.append("thumbnail", thumbnail);
-    }
-
-    return formData;
+    return jsonData;
   };
 
   // Submit the form to the API
-  const submitForm = async (formData: FormData | null) => {
+  const submitForm = async (formData: Record<string, any> | null) => {
     if (!formData) return;
 
     setLoading(true);
@@ -138,59 +130,18 @@ export default function CreateContent() {
         return;
       }
 
-      // Create JSON object from FormData
-      const jsonData: Record<string, any> = {};
-      for (const pair of (formData as any).entries()) {
-        // Skip file uploads for JSON
-        if (pair[0] !== "thumbnail") {
-          jsonData[pair[0]] = pair[1];
-        }
-      }
+      await axios.post("/api/content", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-      // Convert sub_menu_id to number if needed
-      if (jsonData.sub_menu_id) {
-        jsonData.sub_menu_id = parseInt(jsonData.sub_menu_id);
-      }
+      setSuccess("Content berhasil dibuat!");
 
-      // Convert status to boolean if needed
-      if (jsonData.status === "true") {
-        jsonData.status = true;
-      } else if (jsonData.status === "false") {
-        jsonData.status = false;
-      }
-
-      if (!thumbnail) {
-        // If no thumbnail, send JSON only
-        await axios.post("/api/content", jsonData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        setSuccess("Content berhasil dibuat!");
-
-        setTimeout(() => {
-          router.push("/admins/content/read");
-        }, 2000);
-      } else {
-        // If there's a thumbnail, use hybrid approach
-        const hybridFormData = new FormData();
-        hybridFormData.append("thumbnail", thumbnail);
-        hybridFormData.append("data", JSON.stringify(jsonData));
-
-        await axios.post("/api/content", hybridFormData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        setSuccess("Content berhasil dibuat!");
-
-        setTimeout(() => {
-          router.push("/admins/content/read");
-        }, 2000);
-      }
+      setTimeout(() => {
+        router.push("/admins/content/read");
+      }, 2000);
     } catch (err: any) {
       console.error("Error creating content:", err);
       
@@ -310,15 +261,6 @@ export default function CreateContent() {
                   <RequiredDocumentsInput
                     requiredDocuments={requiredDocuments}
                     setRequiredDocuments={setRequiredDocuments}
-                  />
-
-                  {/* Thumbnail */}
-                  <ThumbnailUploader
-                    thumbnail={thumbnail}
-                    setThumbnail={setThumbnail}
-                    thumbnailPreview={thumbnailPreview}
-                    setThumbnailPreview={setThumbnailPreview}
-                    validationError={validationErrors.thumbnail}
                   />
 
                   {/* Status Toggle */}
