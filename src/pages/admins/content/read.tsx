@@ -13,6 +13,10 @@ import {
   EyeIcon,
   MagnifyingGlassIcon as SearchIcon,
   PlusIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ChevronDownIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 
 // Interface for content item
@@ -25,7 +29,7 @@ interface ContentItem {
   created_at: string;
   updated_at: string;
   sub_menu_name: string;
-  sub_menu_id: number; // Add this line
+  sub_menu_id: number;
 }
 
 // Interface for pagination
@@ -52,9 +56,8 @@ export default function ContentList() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [search, setSearch] = useState<string>("");
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
-    null
-  );
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // State for delete functionality
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
@@ -101,6 +104,7 @@ export default function ContentList() {
       setError("Terjadi kesalahan saat mengambil data content");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -129,6 +133,12 @@ export default function ContentList() {
   // Handle page change
   const handlePageChange = (page: number) => {
     fetchContentItems(page);
+  };
+
+  // Function to refresh content list
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchContentItems(pagination.current_page);
   };
 
   // Function to open delete modal
@@ -197,6 +207,12 @@ export default function ContentList() {
     });
   };
 
+  // Get truncated description
+  const getTruncatedDescription = (description: string, length = 80) => {
+    if (description.length <= length) return description;
+    return `${description.substring(0, length)}...`;
+  };
+
   return (
     <AdminLayout>
       <Head>
@@ -205,13 +221,19 @@ export default function ContentList() {
 
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Kelola Content
-            </h1>
+          {/* Header section with title and add button */}
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0 mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Kelola Content
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Lihat, tambah, edit, dan hapus content di sini
+              </p>
+            </div>
             <Link
               href="/admins/content/create"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
               Tambah Content
@@ -223,25 +245,39 @@ export default function ContentList() {
           <div className="py-4">
             {/* Search and filter section */}
             <div className="bg-white shadow-sm rounded-lg p-4 mb-6">
-              <div className="flex items-center">
-                <div className="relative flex-grow">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                <div className="relative flex-grow max-w-md">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <SearchIcon className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
                     type="search"
-                    className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-md"
-                    placeholder="Cari content..."
+                    className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-lg placeholder-gray-400 text-sm transition duration-200"
+                    placeholder="Cari content berdasarkan judul..."
                     value={search}
                     onChange={handleSearchChange}
                   />
+                </div>
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-500">
+                    Total: {pagination.total} Content
+                  </span>
+                  <button
+                    onClick={handleRefresh}
+                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200"
+                    disabled={refreshing}
+                  >
+                    <ArrowPathIcon 
+                      className={`h-5 w-5 ${refreshing ? 'animate-spin text-indigo-500' : 'text-gray-500'}`}
+                    />
+                  </button>
                 </div>
               </div>
             </div>
 
             {/* Error message */}
             {error && (
-              <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
+              <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4 rounded-lg shadow-sm">
                 <div className="flex">
                   <div className="flex-shrink-0">
                     <svg
@@ -266,7 +302,7 @@ export default function ContentList() {
 
             {/* Delete success message */}
             {deleteSuccess && (
-              <div className="mb-4 bg-green-50 border-l-4 border-green-400 p-4">
+              <div className="mb-4 bg-green-50 border-l-4 border-green-400 p-4 rounded-lg shadow-sm">
                 <div className="flex">
                   <div className="flex-shrink-0">
                     <svg
@@ -290,7 +326,7 @@ export default function ContentList() {
             )}
 
             {/* Content list */}
-            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div className="bg-white shadow-md rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -317,13 +353,7 @@ export default function ContentList() {
                         scope="col"
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                       >
-                        Tanggal Dibuat
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Terakhir Diperbarui
+                        Tanggal
                       </th>
                       <th
                         scope="col"
@@ -339,17 +369,30 @@ export default function ContentList() {
                       Array(5)
                         .fill(0)
                         .map((_, index) => (
-                          <tr key={index}>
-                            <td
-                              colSpan={6}
-                              className="px-6 py-4 whitespace-nowrap"
-                            >
+                          <tr key={index} className="hover:bg-gray-50 transition duration-150">
+                            <td className="px-6 py-4">
                               <div className="animate-pulse flex space-x-4">
-                                <div className="h-12 w-12 bg-gray-200 rounded"></div>
+                                <div className="h-12 w-12 bg-gray-200 rounded-lg"></div>
                                 <div className="flex-1 space-y-2 py-1">
                                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                                   <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                                 </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <div className="flex justify-end space-x-2">
+                                <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+                                <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+                                <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
                               </div>
                             </td>
                           </tr>
@@ -358,31 +401,53 @@ export default function ContentList() {
                       // Empty state
                       <tr>
                         <td
-                          colSpan={6}
-                          className="px-6 py-4 whitespace-nowrap text-center text-gray-500"
+                          colSpan={5}
+                          className="px-6 py-12 whitespace-nowrap text-center"
                         >
-                          {search
-                            ? "Tidak ada content yang sesuai dengan pencarian"
-                            : "Belum ada content"}
+                          <div className="flex flex-col items-center justify-center">
+                            <svg
+                              className="h-12 w-12 text-gray-300 mb-3"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1}
+                                d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                              />
+                            </svg>
+                            <p className="text-gray-500 font-medium mb-1">
+                              {search
+                                ? "Tidak ada content yang sesuai dengan pencarian"
+                                : "Belum ada content"}
+                            </p>
+                            <p className="text-gray-400 text-sm">
+                              {search
+                                ? "Coba dengan kata kunci lain"
+                                : "Tambahkan content baru untuk mulai"}
+                            </p>
+                          </div>
                         </td>
                       </tr>
                     ) : (
                       // Content items
                       contentItems.map((item) => (
-                        <tr key={item.id}>
+                        <tr key={item.id} className="hover:bg-gray-50 transition duration-150 ease-in-out">
                           <td className="px-6 py-4">
                             <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10">
+                              <div className="flex-shrink-0 h-12 w-12 bg-gray-100 rounded-lg overflow-hidden">
                                 {item.thumbnail ? (
                                   <Image
                                     src={item.thumbnail}
                                     alt={item.title}
-                                    width={40}
-                                    height={40}
-                                    className="h-10 w-10 rounded-md object-cover"
+                                    width={48}
+                                    height={48}
+                                    className="h-12 w-12 object-cover"
                                   />
                                 ) : (
-                                  <div className="h-10 w-10 rounded-md bg-gray-200 flex items-center justify-center">
+                                  <div className="h-12 w-12 flex items-center justify-center bg-gray-200">
                                     <svg
                                       className="h-6 w-6 text-gray-400"
                                       fill="none"
@@ -400,28 +465,28 @@ export default function ContentList() {
                                 )}
                               </div>
                               <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
+                                <div className="text-sm font-semibold text-gray-900 line-clamp-1">
                                   {item.title}
                                 </div>
-                                <div className="text-sm text-gray-500">
-                                  {item.description.length > 50
-                                    ? `${item.description.substring(0, 50)}...`
-                                    : item.description}
+                                <div className="text-sm text-gray-500 line-clamp-2 mt-1">
+                                  {getTruncatedDescription(item.description)}
                                 </div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {item.sub_menu_name}
-                              <span className="ml-1 text-gray-500">
-                                (ID: {item.sub_menu_id})
-                              </span>
+                            <div className="flex flex-col">
+                              <div className="text-sm font-medium text-gray-900">
+                                {item.sub_menu_name}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                ID: {item.sub_menu_id}
+                              </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span
-                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${
                                 item.status
                                   ? "bg-green-100 text-green-800"
                                   : "bg-red-100 text-red-800"
@@ -430,24 +495,28 @@ export default function ContentList() {
                               {item.status ? "Aktif" : "Tidak Aktif"}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDate(item.created_at)}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-col">
+                              <div className="text-sm text-gray-900">
+                                {formatDate(item.created_at)}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Update: {formatDate(item.updated_at)}
+                              </div>
+                            </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDate(item.updated_at)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
                             <div className="flex justify-end space-x-2">
                               <Link
                                 href={`/admins/content/${item.id}/detail`}
-                                className="text-blue-600 hover:text-blue-900"
+                                className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-full transition duration-150"
                                 title="Lihat Detail"
                               >
                                 <EyeIcon className="h-5 w-5" />
                               </Link>
                               <Link
                                 href={`/admins/content/${item.id}/edit`}
-                                className="text-yellow-600 hover:text-yellow-900"
+                                className="p-2 text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50 rounded-full transition duration-150"
                                 title="Edit"
                               >
                                 <PencilIcon className="h-5 w-5" />
@@ -456,7 +525,7 @@ export default function ContentList() {
                                 onClick={() =>
                                   handleOpenDeleteModal(item.id, item.title)
                                 }
-                                className="text-red-600 hover:text-red-900"
+                                className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-full transition duration-150"
                                 title="Hapus"
                               >
                                 <TrashIcon className="h-5 w-5" />
@@ -472,8 +541,8 @@ export default function ContentList() {
 
               {/* Pagination */}
               {!loading && pagination.last_page > 1 && (
-                <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                  <div className="flex-1 flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-700">
                         Menampilkan{" "}
@@ -503,26 +572,14 @@ export default function ContentList() {
                             handlePageChange(pagination.current_page - 1)
                           }
                           disabled={pagination.current_page === 1}
-                          className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                          className={`relative inline-flex items-center px-3 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
                             pagination.current_page === 1
                               ? "text-gray-300 cursor-not-allowed"
                               : "text-gray-500 hover:bg-gray-50"
                           }`}
                         >
                           <span className="sr-only">Previous</span>
-                          <svg
-                            className="h-5 w-5"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                            aria-hidden="true"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
+                          <ArrowLeftIcon className="h-4 w-4" />
                         </button>
 
                         {/* Page numbers */}
@@ -543,7 +600,7 @@ export default function ContentList() {
                                 onClick={() => handlePageChange(page)}
                                 className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                                   pagination.current_page === page
-                                    ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                                    ? "z-10 bg-indigo-50 border-indigo-500 text-indigo-600"
                                     : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
                                 }`}
                               >
@@ -579,26 +636,14 @@ export default function ContentList() {
                           disabled={
                             pagination.current_page === pagination.last_page
                           }
-                          className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                          className={`relative inline-flex items-center px-3 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
                             pagination.current_page === pagination.last_page
                               ? "text-gray-300 cursor-not-allowed"
                               : "text-gray-500 hover:bg-gray-50"
                           }`}
                         >
                           <span className="sr-only">Next</span>
-                          <svg
-                            className="h-5 w-5"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                            aria-hidden="true"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
+                          <ArrowRightIcon className="h-4 w-4" />
                         </button>
                       </nav>
                     </div>
