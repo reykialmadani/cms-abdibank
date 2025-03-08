@@ -11,7 +11,6 @@ interface ThumbnailUploaderProps {
 }
 
 const ThumbnailUploader: React.FC<ThumbnailUploaderProps> = ({
-  thumbnail,
   setThumbnail,
   thumbnailPreview,
   setThumbnailPreview,

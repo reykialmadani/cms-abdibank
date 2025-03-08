@@ -1,6 +1,6 @@
 // pages/admins/content/components/readTableRow.tsx
 import Link from "next/link";
-import { PencilIcon, TrashIcon, EyeIcon } from "@heroicons/react/24/outline";
+import { PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { ContentItem } from "@/types/read";
 
 interface ReadTableRowProps {
@@ -72,13 +72,6 @@ const ReadTableRow: React.FC<ReadTableRowProps> = ({ item, onDelete }) => {
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right">
         <div className="flex justify-end space-x-2">
-          <Link
-            href={`/admins/content/${item.id}/detail`}
-            className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-full transition duration-150"
-            title="Lihat Detail"
-          >
-            <EyeIcon className="h-5 w-5" />
-          </Link>
           <Link
             href={`/admins/content/${item.id}/edit`}
             className="p-2 text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50 rounded-full transition duration-150"
