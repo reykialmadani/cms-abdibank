@@ -14,6 +14,8 @@ import {
   ArrowLeftOnRectangleIcon as LogoutIcon,
   Squares2X2Icon as ViewGridIcon,
   RectangleStackIcon as CollectionIcon,
+  ChevronDownIcon,
+  UserCircleIcon,
 } from "@heroicons/react/24/outline";
 
 interface AdminLayoutProps {
@@ -31,7 +33,7 @@ interface NavItem {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [username, setUsername] = useState<string>("");
-  const [contentMenuOpen, setContentMenuOpen] = useState(false); // State untuk kontrol submenu
+  const [contentMenuOpen, setContentMenuOpen] = useState(false);
   const router = useRouter();
 
   // Check authentication on mount
@@ -86,248 +88,297 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50 flex">
       <Head>
         <title>Admin Dashboard</title>
         <meta name="description" content="Admin dashboard" />
       </Head>
 
-      {/* Mobile Sidebar */}
-      <div
-        className={`fixed inset-0 flex z-40 md:hidden ${sidebarOpen ? "block" : "hidden"}`}
-      >
-        {/* Overlay */}
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-gray-600 bg-opacity-75"
+          className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         ></div>
+      )}
 
-        {/* Sidebar */}
-        <div className="relative flex-1 flex flex-col max-w-xs w-full pt-5 pb-4 bg-white">
-          <div className="absolute top-0 right-0 -mr-12 pt-2">
-            <button
-              type="button"
-              className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <span className="sr-only">Close sidebar</span>
-              <XIcon className="h-6 w-6 text-white" aria-hidden="true" />
-            </button>
-          </div>
-
-          <div className="flex-shrink-0 flex items-center px-4">
+      {/* Mobile Sidebar */}
+      <div
+        className={`fixed inset-y-0 left-0 flex flex-col w-64 max-w-xs bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 md:hidden ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between px-4 py-5 border-b border-gray-100">
+          <div className="flex items-center">
             <Image
               className="h-8 w-auto"
               src="https://bankabdi.co.id/img/logo/logo-color-abdi.svg"
               alt="Bank ABDI"
-              width={157}
-              height={32}
+              width={140}
+              height={28}
             />
           </div>
-          <div className="mt-5 flex-1 h-0 overflow-y-auto">
-            <nav className="px-2 space-y-1">
-              {navigation.map((item) => (
-                <div key={item.name}>
-                  {/* Content dengan submenu */}
-                  {item.name === "Content" ? (
-                    <>
-                      <button
-                        onClick={() => setContentMenuOpen(!contentMenuOpen)}
-                        className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
-                          item.current
-                            ? "bg-gray-100 text-gray-900"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                        }`}
-                      >
+          <button
+            type="button"
+            className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <XIcon className="h-6 w-6" aria-hidden="true" />
+          </button>
+        </div>
+
+        <nav className="flex-1 pt-4 pb-4 overflow-y-auto">
+          <div className="px-4 mb-6">
+            <div className="flex items-center p-3 bg-blue-50 rounded-lg">
+              <div className="p-2 rounded-full bg-blue-100">
+                <UserCircleIcon className="h-6 w-6 text-blue-500" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-800">{username || "Admin"}</p>
+                <p className="text-xs text-gray-500">Administrator</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-2 space-y-1">
+            {navigation.map((item) => (
+              <div key={item.name}>
+                {item.name === "Content" ? (
+                  <>
+                    <button
+                      onClick={() => setContentMenuOpen(!contentMenuOpen)}
+                      className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${
+                        item.current
+                          ? "bg-blue-50 text-blue-700"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      <div className="flex items-center">
                         <item.icon
-                          className={`mr-4 flex-shrink-0 h-6 w-6 ${
-                            item.current
-                              ? "text-gray-500"
-                              : "text-gray-400 group-hover:text-gray-500"
+                          className={`flex-shrink-0 h-5 w-5 mr-3 ${
+                            item.current ? "text-blue-500" : "text-gray-500"
                           }`}
                           aria-hidden="true"
                         />
-                        {item.name}
-                      </button>
-                      {contentMenuOpen && (
-                        <div className="ml-8 mt-2 space-y-1">
-                          <Link
-                            href="/admins/content/create" // Ganti dengan route yang sesuai
-                            className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          >
-                            Create
-                          </Link>
-                          <Link
-                            href="/admins/content/read" // Ganti dengan route yang sesuai
-                            className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          >
-                            Read
-                          </Link>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
-                        item.current
-                          ? "bg-gray-100 text-gray-900"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        <span>{item.name}</span>
+                      </div>
+                      <ChevronDownIcon
+                        className={`h-4 w-4 transition-transform duration-200 ${
+                          contentMenuOpen ? "transform rotate-180" : ""
+                        } ${item.current ? "text-blue-500" : "text-gray-500"}`}
+                      />
+                    </button>
+
+                    <div
+                      className={`overflow-hidden transition-all duration-300 ${
+                        contentMenuOpen
+                          ? "max-h-40 opacity-100"
+                          : "max-h-0 opacity-0"
                       }`}
                     >
-                      <item.icon
-                        className={`mr-4 flex-shrink-0 h-6 w-6 ${
-                          item.current
-                            ? "text-gray-500"
-                            : "text-gray-400 group-hover:text-gray-500"
-                        }`}
-                        aria-hidden="true"
-                      />
-                      {item.name}
-                    </Link>
-                  )}
-                </div>
-              ))}
-              <button
-                onClick={handleLogout}
-                className="w-full group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              >
-                <LogoutIcon
-                  className="mr-4 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-500"
-                  aria-hidden="true"
-                />
-                Logout
-              </button>
-            </nav>
+                      <div className="pl-12 py-2 space-y-2">
+                        <Link
+                          href="/admins/content/create"
+                          className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900"
+                        >
+                          Create
+                        </Link>
+                        <Link
+                          href="/admins/content/read"
+                          className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900"
+                        >
+                          Read
+                        </Link>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${
+                      item.current
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    <item.icon
+                      className={`flex-shrink-0 h-5 w-5 mr-3 ${
+                        item.current ? "text-blue-500" : "text-gray-500"
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <span>{item.name}</span>
+                  </Link>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
+
+          <div className="px-2 mt-6">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors duration-150"
+            >
+              <LogoutIcon className="mr-3 flex-shrink-0 h-5 w-5" aria-hidden="true" />
+              Logout
+            </button>
+          </div>
+        </nav>
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        <div className="flex flex-col flex-grow border-r border-gray-200 pt-5 bg-white overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4">
-            <Image
-              className="h-8 w-auto"
-              src="https://bankabdi.co.id/img/logo/logo-color-abdi.svg"
-              alt="Bank ABDI"
-              width={157}
-              height={32}
-            />
+      <div className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 bg-white shadow-sm z-20">
+        <div className="flex items-center justify-center h-16 px-4 border-b border-gray-100">
+          <Image
+            className="h-8 w-auto"
+            src="https://bankabdi.co.id/img/logo/logo-color-abdi.svg"
+            alt="Bank ABDI"
+            width={140}
+            height={28}
+          />
+        </div>
+
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-4 mt-6 mb-6">
+            <div className="flex items-center p-3 bg-blue-50 rounded-lg">
+              <div className="p-2 rounded-full bg-blue-100">
+                <UserCircleIcon className="h-6 w-6 text-blue-500" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-800">{username || "Admin"}</p>
+                <p className="text-xs text-gray-500">Administrator</p>
+              </div>
+            </div>
           </div>
-          <div className="mt-5 flex-grow flex flex-col">
-            <nav className="flex-1 px-2 pb-4 space-y-1">
+
+          <nav className="px-3 pt-2 pb-5 flex-1 overflow-y-auto">
+            <div className="space-y-1">
               {navigation.map((item) => (
                 <div key={item.name}>
-                  {/* Content dengan submenu */}
                   {item.name === "Content" ? (
                     <>
                       <button
                         onClick={() => setContentMenuOpen(!contentMenuOpen)}
-                        className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                        className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-150 ${
                           item.current
-                            ? "bg-gray-100 text-gray-900"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                            ? "bg-blue-50 text-blue-700"
+                            : "text-gray-700 hover:bg-gray-100"
                         }`}
                       >
-                        <item.icon
-                          className={`mr-3 flex-shrink-0 h-6 w-6 ${
-                            item.current
-                              ? "text-gray-500"
-                              : "text-gray-400 group-hover:text-gray-500"
-                          }`}
-                          aria-hidden="true"
+                        <div className="flex items-center">
+                          <item.icon
+                            className={`flex-shrink-0 h-5 w-5 mr-3 ${
+                              item.current ? "text-blue-500" : "text-gray-500"
+                            }`}
+                            aria-hidden="true"
+                          />
+                          <span>{item.name}</span>
+                        </div>
+                        <ChevronDownIcon
+                          className={`h-4 w-4 transition-transform duration-200 ${
+                            contentMenuOpen ? "transform rotate-180" : ""
+                          } ${item.current ? "text-blue-500" : "text-gray-500"}`}
                         />
-                        {item.name}
                       </button>
-                      {contentMenuOpen && (
-                        <div className="ml-8 mt-2 space-y-1">
+
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ${
+                          contentMenuOpen
+                            ? "max-h-40 opacity-100"
+                            : "max-h-0 opacity-0"
+                        }`}
+                      >
+                        <div className="pl-11 py-2 space-y-1">
                           <Link
-                            href="/admins/content/create" // Ganti dengan route yang sesuai
-                            className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                            href="/admins/content/create"
+                            className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900"
                           >
                             Create
                           </Link>
                           <Link
-                            href="/admins/content/read" // Ganti dengan route yang sesuai
-                            className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                            href="/admins/content/read"
+                            className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900"
                           >
                             Read
                           </Link>
                         </div>
-                      )}
+                      </div>
                     </>
                   ) : (
                     <Link
                       href={item.href}
-                      className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                      className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-150 ${
                         item.current
-                          ? "bg-gray-100 text-gray-900"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                          ? "bg-blue-50 text-blue-700"
+                          : "text-gray-700 hover:bg-gray-100"
                       }`}
                     >
                       <item.icon
-                        className={`mr-3 flex-shrink-0 h-6 w-6 ${
-                          item.current
-                            ? "text-gray-500"
-                            : "text-gray-400 group-hover:text-gray-500"
+                        className={`flex-shrink-0 h-5 w-5 mr-3 ${
+                          item.current ? "text-blue-500" : "text-gray-500"
                         }`}
                         aria-hidden="true"
                       />
-                      {item.name}
+                      <span>{item.name}</span>
                     </Link>
                   )}
                 </div>
               ))}
+            </div>
+
+            <div className="pt-5 mt-5 border-t border-gray-100">
               <button
                 onClick={handleLogout}
-                className="w-full group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                className="w-full flex items-center px-3 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors duration-150"
               >
-                <LogoutIcon
-                  className="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-500"
-                  aria-hidden="true"
-                />
+                <LogoutIcon className="mr-3 flex-shrink-0 h-5 w-5" aria-hidden="true" />
                 Logout
               </button>
-            </nav>
-          </div>
+            </div>
+          </nav>
         </div>
       </div>
 
       {/* Content area */}
-      <div className="md:pl-64 flex flex-col">
-        <div className="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-white shadow">
-          <button
-            type="button"
-            className="px-4 border-r border-gray-200 text-gray-500 md:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <span className="sr-only">Open sidebar</span>
-            <MenuIcon className="h-6 w-6" aria-hidden="true" />
-          </button>
-          <div className="flex-1 px-4 flex justify-between">
-            <div className="flex-1 flex">
-              {/* Dapat ditambahkan search bar di sini jika diperlukan */}
-            </div>
-            <div className="ml-4 flex items-center md:ml-6">
-              {/* User info */}
-              <div className="flex items-center">
-                <div className="ml-3">
-                  <div className="text-base font-medium text-gray-800">
-                    {username || "Admin"}
-                  </div>
-                  <div className="text-sm font-medium text-gray-500">
-                    Administrator
+      <div className="flex-1 flex flex-col md:pl-64">
+        {/* Top header */}
+        <header className="sticky top-0 z-10 bg-white shadow-sm h-16 flex items-center">
+          <div className="flex items-center justify-between px-4 w-full">
+            <button
+              type="button"
+              className="md:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <span className="sr-only">Open sidebar</span>
+              <MenuIcon className="h-6 w-6" aria-hidden="true" />
+            </button>
+
+            <div className="flex-1 flex justify-between items-center">
+              <h1 className="text-xl font-semibold text-gray-800 ml-2 md:ml-0">
+                {/* Display current page name based on route */}
+                {navigation.find((item) => item.current)?.name || "Dashboard"}
+              </h1>
+
+              <div className="flex items-center space-x-4">
+                {/* You can add notification icon or other header items here */}
+                <div className="hidden md:flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                    <span className="text-blue-600 font-medium">
+                      {username ? username.charAt(0).toUpperCase() : "A"}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </header>
 
         {/* Main content */}
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 overflow-y-auto">
+          <div className="py-6 px-4 sm:px-6 lg:px-8">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

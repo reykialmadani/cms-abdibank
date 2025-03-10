@@ -1,55 +1,46 @@
-// pages/admins/content/create.tsx
-import { useState, useEffect, FormEvent, ChangeEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import axios from "axios";
-import Image from "next/image";
+import axios, { AxiosResponse } from "axios"; // Import AxiosResponse type
 import AdminLayout from "@/pages/admins/component/AdminLayout";
-
-// Interface untuk option dropdown
-interface DropdownOption {
-  id: number;
-  name: string;
-}
-
-// Interface untuk error validasi
-interface ValidationErrors {
-  sub_menu_id?: string;
-  title?: string;
-  description?: string;
-  required_documents?: string;
-  thumbnail?: string;
-}
-
-interface SubMenuResponse {
-  id: number;
-  sub_menu_name: string;
-}
+import SubMenuSelector from "@/pages/admins/component/SubMenuSelector";
+import TitleInput from "@/pages/admins/component/TitleInput";
+import DescriptionFormatSelector from "@/pages/admins/component/DescriptionFormatSelector";
+import DescriptionEditor from "@/pages/admins/component/DescriptionEditor";
+import RequiredDocumentsInput from "@/pages/admins/component/RequiredDocumentsInput";
+import StatusToggle from "@/pages/admins/component/StatusToggle";
+import AlertMessage from "@/pages/admins/component/AlertMessage";
+import { DropdownOption, ValidationErrors, ListItem } from "@/types/content";
+import { convertListToHtml, getTextContentLength, generateDescriptionFromList } from "@/utils/contentHelpers";
 
 export default function CreateContent() {
-  // State untuk form input
+  // State for form inputs
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
+  const [descriptionFormat, setDescriptionFormat] = useState<"paragraph" | "nested-list">("paragraph");
   const [requiredDocuments, setRequiredDocuments] = useState<string>("");
   const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
-  const [thumbnail, setThumbnail] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string>("");
   const [status, setStatus] = useState<boolean>(true);
 
-  // State untuk dropdown options
+  // State for nested list
+  const [listItems, setListItems] = useState<ListItem[]>([{ id: "1", text: "", level: 1, children: [] }]);
+  const [currentListId, setCurrentListId] = useState<number>(2);
+
+  // State for preview
+  const [showPreview, setShowPreview] = useState<boolean>(false);
+
+  // State for dropdown options
   const [subMenuOptions, setSubMenuOptions] = useState<DropdownOption[]>([]);
 
-  // State untuk loading, error, dan sukses
+  // State for loading, error, and success
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   const router = useRouter();
 
-  // Fetch sub menu options dari API saat komponen di-mount
+  // Fetch sub menu options from API when component mounts
   useEffect(() => {
     const fetchSubMenuOptions = async () => {
       try {
@@ -59,11 +50,11 @@ export default function CreateContent() {
           return;
         }
 
-        const response = await axios.get("/api/subMenu", {
+        const response: AxiosResponse<{ data: { id: number; sub_menu_name: string }[] }> = await axios.get("/api/subMenu", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const options = response.data.data.map((subMenu: SubMenuResponse) => ({
+        const options = response.data.data.map((subMenu) => ({
           id: subMenu.id,
           name: subMenu.sub_menu_name,
         }));
@@ -77,27 +68,7 @@ export default function CreateContent() {
     fetchSubMenuOptions();
   }, [router]);
 
-  // Handle file upload untuk thumbnail
-  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setThumbnail(file);
-
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      // Reset error jika ada
-      if (validationErrors.thumbnail) {
-        setValidationErrors((prev) => ({ ...prev, thumbnail: undefined }));
-      }
-    }
-  };
-
-  // Validasi form sebelum submit
+  // Validate form before submit
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
 
@@ -109,7 +80,13 @@ export default function CreateContent() {
       errors.sub_menu_id = "Sub menu harus dipilih";
     }
 
-    if (description.trim().length < 20) {
+    // For nested list, validate total content length
+    if (descriptionFormat === "nested-list") {
+      const htmlContent = convertListToHtml(listItems);
+      if (getTextContentLength(htmlContent) < 20) {
+        errors.description = "Deskripsi harus minimal 20 karakter";
+      }
+    } else if (description.trim().length < 20) {
       errors.description = "Deskripsi harus minimal 20 karakter";
     }
 
@@ -117,152 +94,105 @@ export default function CreateContent() {
     return Object.keys(errors).length === 0;
   };
 
-  // Handle form submission
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-  
-    // Validasi form
-    if (!validateForm()) {
-      return;
-    }
-  
+  // Prepare form data for submission
+  const prepareFormData = (descriptionContent: string) => {
     if (!selectedSubMenu) {
       setError("Sub Menu harus dipilih");
-      return;
+      return null;
     }
-  
+
+    // Create the data object
+    const jsonData: Record<string, any> = {
+      title: title,
+      description: descriptionContent,
+      required_documents: requiredDocuments,
+      status: status,
+      sub_menu_id: selectedSubMenu
+    };
+
+    return jsonData;
+  };
+
+  // Submit the form to the API
+  const submitForm = async (formData: Record<string, any> | null) => {
+    if (!formData) return;
+
     setLoading(true);
     setError("");
     setSuccess("");
     setValidationErrors({});
-  
+
     try {
       const token = localStorage.getItem("token");
-  
+
       if (!token) {
         router.push("/");
         return;
       }
-  
-      // Pendekatan 1: Coba dengan JSON untuk data utama
-      // dan FormData terpisah untuk thumbnail jika perlu
-      const jsonData = {
-        title: title,
-        description: description,
-        required_documents: requiredDocuments,
-        status: status,
-        sub_menu_id: parseInt(selectedSubMenu.toString()) // Pastikan numeric
-      };
-  
-      console.log("Sending JSON data:", jsonData);
-  
-      // Jika tidak ada thumbnail, gunakan JSON request biasa
-      if (!thumbnail) {
-        const response = await axios.post("/api/content", jsonData, {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-        });
-        
-        console.log("Success with JSON:", response.data);
-        setSuccess("Content berhasil dibuat!");
-        
-        setTimeout(() => {
-          router.push("/admins/content/read");
-        }, 2000);
-      } 
-      // Jika ada thumbnail, gunakan FormData
-      else {
-        // Buat FormData baru
-        const formData = new FormData();
-        
-        // Tambahkan file thumbnail
-        formData.append("thumbnail", thumbnail);
-        
-        // Tambahkan data JSON sebagai string ke field "data"
-        formData.append("data", JSON.stringify(jsonData));
-        
-        console.log("Sending FormData with JSON data field");
-        
-        const response = await axios.post("/api/content", formData, {
-          headers: { 
-            Authorization: `Bearer ${token}`
-            // Biarkan axios mengatur header multipart/form-data sendiri
-          },
-        });
-        
-        console.log("Success with FormData + JSON:", response.data);
-        setSuccess("Content berhasil dibuat!");
-        
-        setTimeout(() => {
-          router.push("/admins/content/read");
-        }, 2000);
-      }
-    } catch (err) {
+
+      await axios.post("/api/content", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      setSuccess("Content berhasil dibuat!");
+
+      setTimeout(() => {
+        router.push("/admins/content/read");
+      }, 2000);
+    } catch (err: any) {
       console.error("Error creating content:", err);
       
-      if (axios.isAxiosError(err) && err.response) {
-        console.error("Error details:", {
-          status: err.response.status,
-          data: err.response.data,
-          headers: err.response.headers
-        });
-        
-        // Pendekatan alternatif jika JSON gagal
-        if (err.response.status === 400) {
-          console.log("JSON approach failed, trying direct FormData...");
-          
-          try {
-            // Buat FormData langsung dengan nilai-nilai primitif
-            const directFormData = new FormData();
-            directFormData.append("title", title);
-            directFormData.append("description", description);
-            directFormData.append("required_documents", requiredDocuments);
-            directFormData.append("status", status.toString());
-            directFormData.append("sub_menu_id", selectedSubMenu.toString());
-            
-            if (thumbnail) {
-              directFormData.append("thumbnail", thumbnail);
-            }
-            
-            // Coba request dengan sub_menu_id sebagai number literal
-            const directResponse = await axios.post("/api/content", directFormData, {
-              headers: { 
-                Authorization: `Bearer ${token}`
-              },
-            });
-            
-            console.log("Success with direct FormData:", directResponse.data);
-            setSuccess("Content berhasil dibuat!");
-            
-            setTimeout(() => {
-              router.push("/admins/content/read");
-            }, 2000);
-            
-            return;
-          } catch (directError) {
-            console.error("Direct FormData also failed:", directError);
-          }
-        }
-        
-        if (err.response.status === 422 && err.response.data?.errors) {
-          setValidationErrors(err.response.data.errors);
-        } else {
-          setError(
-            err.response.data?.message || 
-            err.response.data?.error ||
-            "Terjadi kesalahan saat membuat content"
-          );
-        }
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
       } else {
-        setError("Terjadi kesalahan saat menghubungi server");
+        setError("Terjadi kesalahan saat membuat content");
       }
     } finally {
       setLoading(false);
     }
   };
-  
+
+  // Handle form submission
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    try {
+      // Format description based on selected type before validation
+      if (descriptionFormat === "nested-list") {
+        const formattedDesc = generateDescriptionFromList(listItems, descriptionFormat);
+
+        // Store temporarily to not affect the UI
+        const tempDescription = formattedDesc;
+
+        // Check validation with the formatted content
+        if (!validateForm()) {
+          return;
+        }
+
+        // If validation passes, use the formatted content
+        const formData = prepareFormData(tempDescription);
+        if (formData) {
+          await submitForm(formData);
+        }
+      } else {
+        // Regular validation and submission
+        if (!validateForm()) {
+          return;
+        }
+
+        const formData = prepareFormData(description);
+        if (formData) {
+          await submitForm(formData);
+        }
+      }
+    } catch (err) {
+      console.error("Error in form submission:", err);
+      setError("Terjadi kesalahan saat memproses form");
+    }
+  };
 
   return (
     <AdminLayout>
@@ -282,276 +212,70 @@ export default function CreateContent() {
             {/* Card container */}
             <div className="bg-white shadow overflow-hidden sm:rounded-lg">
               <div className="px-4 py-5 sm:p-6">
-                {/* Success message */}
+                {/* Alert Messages */}
                 {success && (
-                  <div className="mb-4 bg-green-50 border-l-4 border-green-400 p-4">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <svg
-                          className="h-5 w-5 text-green-400"
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-green-700">{success}</p>
-                      </div>
-                    </div>
-                  </div>
+                  <AlertMessage type="success" message={success} />
                 )}
-
-                {/* Error message */}
                 {error && (
-                  <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <svg
-                          className="h-5 w-5 text-red-400"
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-red-700">{error}</p>
-                      </div>
-                    </div>
-                  </div>
+                  <AlertMessage type="error" message={error} />
                 )}
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Sub Menu Dropdown */}
-                  <div>
-                    <label
-                      htmlFor="subMenu"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Sub Menu
-                    </label>
-                    <div className="mt-1">
-                      <select
-                        id="subMenu"
-                        value={selectedSubMenu || ""}
-                        onChange={(e) =>
-                          setSelectedSubMenu(
-                            e.target.value ? parseInt(e.target.value) : null
-                          )
-                        }
-                        className={`text-black block w-full px-3 py-2 border ${
-                          validationErrors.sub_menu_id
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                      >
-                        <option value="">Pilih Sub Menu</option>
-                        {subMenuOptions.map((option) => (
-                          <option key={option.id} value={option.id}>
-                            {option.name}
-                          </option>
-                        ))}
-                      </select>
-                      {validationErrors.sub_menu_id && (
-                        <p className="mt-2 text-sm text-red-600">
-                          {validationErrors.sub_menu_id}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                  <SubMenuSelector
+                    selectedSubMenu={selectedSubMenu}
+                    setSelectedSubMenu={setSelectedSubMenu}
+                    options={subMenuOptions}
+                    validationError={validationErrors.sub_menu_id}
+                  />
 
                   {/* Title */}
-                  <div>
-                    <label
-                      htmlFor="title"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Judul
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        type="text"
-                        id="title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className={`text-black block w-full px-3 py-2 border ${
-                          validationErrors.title
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                        placeholder="Masukkan judul content"
-                      />
-                      {validationErrors.title && (
-                        <p className="mt-2 text-sm text-red-600">
-                          {validationErrors.title}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                  <TitleInput
+                    title={title}
+                    setTitle={setTitle}
+                    validationError={validationErrors.title}
+                  />
+
+                  {/* Description Format Selection */}
+                  <DescriptionFormatSelector
+                    descriptionFormat={descriptionFormat}
+                    setDescriptionFormat={setDescriptionFormat}
+                  />
 
                   {/* Description */}
-                  <div>
-                    <label
-                      htmlFor="description"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Deskripsi
-                    </label>
-                    <div className="mt-1">
-                      <textarea
-                        id="description"
-                        rows={4}
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className={`text-black block w-full px-3 py-2 border ${
-                          validationErrors.description
-                            ? "border-red-300"
-                            : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                        placeholder="Masukkan deskripsi"
-                      />
-                      {validationErrors.description && (
-                        <p className="mt-2 text-sm text-red-600">
-                          {validationErrors.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                  <DescriptionEditor
+                    descriptionFormat={descriptionFormat}
+                    description={description}
+                    setDescription={setDescription}
+                    listItems={listItems}
+                    setListItems={setListItems}
+                    currentListId={currentListId}
+                    setCurrentListId={setCurrentListId}
+                    showPreview={showPreview}
+                    setShowPreview={setShowPreview}
+                    validationError={validationErrors.description}
+                  />
 
                   {/* Required Documents */}
-                  <div>
-                    <label
-                      htmlFor="requiredDocuments"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Dokumen yang Dibutuhkan (opsional)
-                    </label>
-                    <div className="mt-1">
-                      <textarea
-                        id="requiredDocuments"
-                        rows={3}
-                        value={requiredDocuments}
-                        onChange={(e) => setRequiredDocuments(e.target.value)}
-                        className="text-black block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        placeholder="Masukkan daftar dokumen yang dibutuhkan"
-                      />
-                    </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                      Daftar dokumen yang diperlukan, pisahkan dengan baris
-                      baru.
-                    </p>
-                  </div>
-
-                  {/* Thumbnail */}
-                  <div>
-                    <label
-                      htmlFor="thumbnail"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Thumbnail (opsional)
-                    </label>
-                    <div className="mt-1 flex items-center">
-                      <div className="w-full flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                        <div className="space-y-1 text-center">
-                          {thumbnailPreview ? (
-                            <div className="mb-3">
-                              {/* Use Next.js Image with width and height */}
-                              <Image
-                                src={thumbnailPreview}
-                                alt="Thumbnail preview"
-                                width={128}
-                                height={128}
-                                className="mx-auto h-32 w-auto object-cover"
-                                unoptimized={true} // Important for data URLs or blob URLs
-                              />
-                            </div>
-                          ) : (
-                            <svg
-                              className="mx-auto h-12 w-12 text-gray-400"
-                              stroke="currentColor"
-                              fill="none"
-                              viewBox="0 0 48 48"
-                            >
-                              <path
-                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                                strokeWidth={2}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          )}
-                          <div className="flex text-sm text-gray-600">
-                            <label
-                              htmlFor="thumbnail"
-                              className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
-                            >
-                              <span>Upload gambar</span>
-                              <input
-                                id="thumbnail"
-                                name="thumbnail"
-                                type="file"
-                                accept="image/*"
-                                className="sr-only"
-                                onChange={handleThumbnailChange}
-                              />
-                            </label>
-                            <p className="pl-1">atau seret dan lepas</p>
-                          </div>
-                          <p className="text-xs text-gray-500">
-                            PNG, JPG, GIF sampai 2MB
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    {validationErrors.thumbnail && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {validationErrors.thumbnail}
-                      </p>
-                    )}
-                  </div>
+                  <RequiredDocumentsInput
+                    requiredDocuments={requiredDocuments}
+                    setRequiredDocuments={setRequiredDocuments}
+                  />
 
                   {/* Status Toggle */}
-                  <div className="flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        id="status"
-                        name="status"
-                        type="checkbox"
-                        checked={status}
-                        onChange={(e) => setStatus(e.target.checked)}
-                        className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label
-                        htmlFor="status"
-                        className="font-medium text-gray-700"
-                      >
-                        Aktif
-                      </label>
-                      <p className="text-gray-500">
-                        Content akan ditampilkan jika diaktifkan
-                      </p>
-                    </div>
-                  </div>
+                  <StatusToggle
+                    status={status}
+                    setStatus={setStatus}
+                    label="Aktif"
+                    description="Content akan ditampilkan jika diaktifkan"
+                  />
 
                   {/* Form Actions */}
                   <div className="flex justify-end space-x-3">
                     <button
                       type="button"
-                      onClick={() => router.push("/admins/content/create")}
+                      onClick={() => router.push("/admins/content/read")}
                       className="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       Batal
