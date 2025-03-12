@@ -3,7 +3,6 @@ import { useState, useEffect, FormEvent } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import axios from "axios";
-// Removed Image import
 import AdminLayout from "@/pages/admins/component/AdminLayout";
 import SubMenuSelector from "@/pages/admins/component/SubMenuSelector";
 import TitleInput from "@/pages/admins/component/TitleInput";
@@ -28,6 +27,8 @@ interface ContentDetail {
   required_documents: string | null;
   status: boolean;
   sub_menu_id: number;
+  report_type?: string;
+  report_year?: string;
 }
 
 export default function EditContent() {
@@ -38,7 +39,6 @@ export default function EditContent() {
   const [requiredDocuments, setRequiredDocuments] = useState<string>("");
   const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
   const [status, setStatus] = useState<boolean>(true);
-  // Removed thumbnail-related state variables
   
   // State for nested list
   const [listItems, setListItems] = useState<ListItem[]>([{ id: "1", text: "", level: 1, children: [] }]);
@@ -56,9 +56,39 @@ export default function EditContent() {
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+
+  // State untuk laporan
+  const [isReportSubMenu, setIsReportSubMenu] = useState<boolean>(false);
+  const [reportType, setReportType] = useState<string | null>(null);
+  const [reportYear, setReportYear] = useState<string | null>(null);
   
   const router = useRouter();
   const { id } = router.query;
+
+  // Generate tahun untuk pilihan (2021-2025)
+  const yearOptions = Array.from({ length: 5 }, (_, i) => String(2021 + i));
+
+  // Cek apakah sub menu yang dipilih adalah laporan
+  useEffect(() => {
+    if (selectedSubMenu) {
+      const selectedOption = subMenuOptions.find((option) => option.id === selectedSubMenu);
+      // Periksa apakah nama sub menu mengandung kata "laporan" (case insensitive)
+      const isReport = selectedOption 
+        ? selectedOption.name.toLowerCase().includes("laporan") 
+        : false;
+      
+      setIsReportSubMenu(isReport);
+      
+      if (!isReport) {
+        setReportType(null);
+        setReportYear(null);
+      }
+    } else {
+      setIsReportSubMenu(false);
+      setReportType(null);
+      setReportYear(null);
+    }
+  }, [selectedSubMenu, subMenuOptions]);
 
   // Fetch content data when component mounts
   useEffect(() => {
@@ -88,13 +118,20 @@ export default function EditContent() {
         setSelectedSubMenu(contentData.sub_menu_id);
         setStatus(contentData.status);
         
+        // Set report data if available
+        if (contentData.report_type) {
+          setReportType(contentData.report_type);
+        }
+        
+        if (contentData.report_year) {
+          setReportYear(contentData.report_year);
+        }
+        
         if (contentData.description.includes('<ul>') || contentData.description.includes('<ol>')) {
           setDescriptionFormat("nested-list");
-
         } else {
           setDescriptionFormat("paragraph");
         }
-        
         
         // Fetch sub menu options
         const subMenuResponse = await axios.get('/api/subMenu', {
@@ -119,18 +156,27 @@ export default function EditContent() {
     fetchContentData();
   }, [id, router]);
 
-  // Removed thumbnail-related handler functions
-
   // Validate form before submit
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
     
-    if (title.trim().length < 5) {
+    if (!isReportSubMenu && title.trim().length < 5) {
       errors.title = "Judul harus minimal 5 karakter";
     }
     
     if (!selectedSubMenu) {
       errors.sub_menu_id = "Sub menu harus dipilih";
+    }
+
+    // Validasi spesifik untuk sub menu laporan
+    if (isReportSubMenu) {
+      if (!reportType) {
+        errors.reportType = "Jenis laporan harus dipilih";
+      }
+      
+      if (!reportYear) {
+        errors.reportYear = "Tahun laporan harus dipilih";
+      }
     }
     
     // For nested list, validate total content length
@@ -154,14 +200,28 @@ export default function EditContent() {
       return null;
     }
 
-    // Create the data object as JSON format
-    const jsonData = {
-      title: title,
+    // Membuat objek data
+    const jsonData: Record<string, any> = {
+      sub_menu_id: selectedSubMenu,
       description: descriptionContent,
       required_documents: requiredDocuments,
       status: status,
-      sub_menu_id: selectedSubMenu
     };
+
+    // Set judul berdasarkan kondisi (laporan atau regular)
+    if (isReportSubMenu && reportType && reportYear) {
+      jsonData.title = `Laporan ${reportType === 'triwulan' ? 'Triwulan' : 'Tahunan'} ${reportYear}`;
+      jsonData.report_type = reportType;
+      jsonData.report_year = reportYear;
+    } else {
+      jsonData.title = title;
+    }
+
+    // Ambil user ID dari local storage jika tersedia
+    const userId = localStorage.getItem("userId");
+    if (userId) {
+      jsonData.updated_by = parseInt(userId);
+    }
 
     return jsonData;
   };
@@ -192,7 +252,7 @@ export default function EditContent() {
       
       setSuccess("Content berhasil diperbarui!");
       
-      // Redirect to content detail page after 2 seconds
+      // Redirect to content list page after 2 seconds
       setTimeout(() => {
         router.push(`/admins/content/read`);
       }, 2000);
@@ -252,6 +312,62 @@ export default function EditContent() {
       console.error("Error in form submission:", err);
       setError("Terjadi kesalahan saat memproses form");
     }
+  };
+
+  // Render komponen Report Options
+  const renderReportOptions = () => {
+    if (!isReportSubMenu) return null;
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Jenis Laporan
+          </label>
+          <select
+            className={` text-black mt-1 block w-full py-2 px-3 border ${
+              validationErrors.reportType ? "border-red-300" : "border-gray-300"
+            } bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+            value={reportType || ""}
+            onChange={(e) => setReportType(e.target.value)}
+          >
+            <option value="">Pilih Jenis Laporan</option>
+            <option value="triwulan">Laporan Triwulan</option>
+            <option value="tahunan">Laporan Tahunan</option>
+          </select>
+          {validationErrors.reportType && (
+            <p className="mt-2 text-sm text-red-600">
+              {validationErrors.reportType}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Tahun Laporan
+          </label>
+          <select
+            className={`text-black mt-1 block w-full py-2 px-3 border ${
+              validationErrors.reportYear ? "border-red-300" : "border-gray-300"
+            } bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+            value={reportYear || ""}
+            onChange={(e) => setReportYear(e.target.value)}
+          >
+            <option value="">Pilih Tahun</option>
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+          {validationErrors.reportYear && (
+            <p className="mt-2 text-sm text-red-600">
+              {validationErrors.reportYear}
+            </p>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -315,12 +431,17 @@ export default function EditContent() {
                       validationError={validationErrors.sub_menu_id}
                     />
 
-                    {/* Title */}
-                    <TitleInput
-                      title={title}
-                      setTitle={setTitle}
-                      validationError={validationErrors.title}
-                    />
+                    {/* Report Options (Conditional) */}
+                    {renderReportOptions()}
+
+                    {/* Title (kondisional berdasarkan apakah sub menu adalah laporan) */}
+                    {!isReportSubMenu && (
+                      <TitleInput
+                        title={title}
+                        setTitle={setTitle}
+                        validationError={validationErrors.title}
+                      />
+                    )}
 
                     {/* Description Format Selection */}
                     <DescriptionFormatSelector
