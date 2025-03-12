@@ -23,7 +23,7 @@ model content {
   sub_menu_id        Int?
   title              String    @db.VarChar(255)
   description        String?
-  required_documents String?
+  required_documents String?  
   thumbnail          String?   @db.VarChar(255)
   status             Boolean?  @default(true)
   report_type        String?   // Kolom untuk jenis laporan
