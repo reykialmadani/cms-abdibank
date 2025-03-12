@@ -1,7 +1,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import axios, { AxiosResponse } from "axios"; // Import AxiosResponse type
+import axios, { AxiosResponse } from "axios";
 import AdminLayout from "@/pages/admins/component/AdminLayout";
 import SubMenuSelector from "@/pages/admins/component/SubMenuSelector";
 import TitleInput from "@/pages/admins/component/TitleInput";
@@ -14,7 +14,7 @@ import { DropdownOption, ValidationErrors, ListItem } from "@/types/content";
 import { convertListToHtml, getTextContentLength, generateDescriptionFromList } from "@/utils/contentHelpers";
 
 export default function CreateContent() {
-  // State for form inputs
+  // State untuk form inputs
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [descriptionFormat, setDescriptionFormat] = useState<"paragraph" | "nested-list">("paragraph");
@@ -22,25 +22,30 @@ export default function CreateContent() {
   const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
   const [status, setStatus] = useState<boolean>(true);
 
-  // State for nested list
+  // State untuk nested list
   const [listItems, setListItems] = useState<ListItem[]>([{ id: "1", text: "", level: 1, children: [] }]);
   const [currentListId, setCurrentListId] = useState<number>(2);
 
-  // State for preview
+  // State untuk preview
   const [showPreview, setShowPreview] = useState<boolean>(false);
 
-  // State for dropdown options
+  // State untuk dropdown options
   const [subMenuOptions, setSubMenuOptions] = useState<DropdownOption[]>([]);
 
-  // State for loading, error, and success
+  // State untuk loading, error, dan success
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
+  // State untuk laporan
+  const [isReportSubMenu, setIsReportSubMenu] = useState<boolean>(false);
+  const [reportType, setReportType] = useState<string | null>(null);
+  const [reportYear, setReportYear] = useState<string | null>(null);
+
   const router = useRouter();
 
-  // Fetch sub menu options from API when component mounts
+  // Fetch sub menu options dari API saat komponen mount
   useEffect(() => {
     const fetchSubMenuOptions = async () => {
       try {
@@ -68,11 +73,36 @@ export default function CreateContent() {
     fetchSubMenuOptions();
   }, [router]);
 
-  // Validate form before submit
+  // Cek apakah sub menu yang dipilih adalah laporan
+  useEffect(() => {
+    if (selectedSubMenu) {
+      const selectedOption = subMenuOptions.find((option) => option.id === selectedSubMenu);
+      // Periksa apakah nama sub menu mengandung kata "laporan" (case insensitive)
+      const isReport = selectedOption 
+        ? selectedOption.name.toLowerCase().includes("laporan") 
+        : false;
+      
+      setIsReportSubMenu(isReport);
+      
+      if (!isReport) {
+        setReportType(null);
+        setReportYear(null);
+      }
+    } else {
+      setIsReportSubMenu(false);
+      setReportType(null);
+      setReportYear(null);
+    }
+  }, [selectedSubMenu, subMenuOptions]);
+
+  // Generate tahun untuk pilihan (2021-2025)
+  const yearOptions = Array.from({ length: 5 }, (_, i) => String(2021 + i));
+
+  // Validasi form sebelum submit
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
 
-    if (title.trim().length < 5) {
+    if (!isReportSubMenu && title.trim().length < 5) {
       errors.title = "Judul harus minimal 5 karakter";
     }
 
@@ -80,7 +110,18 @@ export default function CreateContent() {
       errors.sub_menu_id = "Sub menu harus dipilih";
     }
 
-    // For nested list, validate total content length
+    // Validasi spesifik untuk sub menu laporan
+    if (isReportSubMenu) {
+      if (!reportType) {
+        errors.reportType = "Jenis laporan harus dipilih";
+      }
+      
+      if (!reportYear) {
+        errors.reportYear = "Tahun laporan harus dipilih";
+      }
+    }
+
+    // Untuk nested list, validasi total panjang konten
     if (descriptionFormat === "nested-list") {
       const htmlContent = convertListToHtml(listItems);
       if (getTextContentLength(htmlContent) < 20) {
@@ -94,26 +135,40 @@ export default function CreateContent() {
     return Object.keys(errors).length === 0;
   };
 
-  // Prepare form data for submission
+  // Mempersiapkan data form untuk submission
   const prepareFormData = (descriptionContent: string) => {
     if (!selectedSubMenu) {
       setError("Sub Menu harus dipilih");
       return null;
     }
 
-    // Create the data object
+    // Membuat objek data
     const jsonData: Record<string, any> = {
-      title: title,
+      sub_menu_id: selectedSubMenu,
       description: descriptionContent,
       required_documents: requiredDocuments,
       status: status,
-      sub_menu_id: selectedSubMenu
     };
+
+    // Set judul berdasarkan kondisi (laporan atau regular)
+    if (isReportSubMenu && reportType && reportYear) {
+      jsonData.title = `Laporan ${reportType === 'triwulan' ? 'Triwulan' : 'Tahunan'} ${reportYear}`;
+      jsonData.report_type = reportType;
+      jsonData.report_year = reportYear;
+    } else {
+      jsonData.title = title;
+    }
+
+    // Ambil user ID dari local storage jika tersedia
+    const userId = localStorage.getItem("userId");
+    if (userId) {
+      jsonData.updated_by = parseInt(userId);
+    }
 
     return jsonData;
   };
 
-  // Submit the form to the API
+  // Submit form ke API
   const submitForm = async (formData: Record<string, any> | null) => {
     if (!formData) return;
 
@@ -147,6 +202,8 @@ export default function CreateContent() {
       
       if (err.response && err.response.data && err.response.data.message) {
         setError(err.response.data.message);
+      } else if (err.response && err.response.data && err.response.data.error) {
+        setError(err.response.data.error);
       } else {
         setError("Terjadi kesalahan saat membuat content");
       }
@@ -160,25 +217,25 @@ export default function CreateContent() {
     e.preventDefault();
 
     try {
-      // Format description based on selected type before validation
+      // Format deskripsi berdasarkan tipe yang dipilih sebelum validasi
       if (descriptionFormat === "nested-list") {
         const formattedDesc = generateDescriptionFromList(listItems, descriptionFormat);
 
-        // Store temporarily to not affect the UI
+        // Simpan sementara untuk tidak mempengaruhi UI
         const tempDescription = formattedDesc;
 
-        // Check validation with the formatted content
+        // Periksa validasi dengan konten yang diformat
         if (!validateForm()) {
           return;
         }
 
-        // If validation passes, use the formatted content
+        // Jika validasi lolos, gunakan konten yang diformat
         const formData = prepareFormData(tempDescription);
         if (formData) {
           await submitForm(formData);
         }
       } else {
-        // Regular validation and submission
+        // Validasi dan submission reguler
         if (!validateForm()) {
           return;
         }
@@ -192,6 +249,62 @@ export default function CreateContent() {
       console.error("Error in form submission:", err);
       setError("Terjadi kesalahan saat memproses form");
     }
+  };
+
+  // Render komponen Report Options
+  const renderReportOptions = () => {
+    if (!isReportSubMenu) return null;
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Jenis Laporan
+          </label>
+          <select
+            className={` text-black mt-1 block w-full py-2 px-3 border ${
+              validationErrors.reportType ? "border-red-300" : "border-gray-300"
+            } bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+            value={reportType || ""}
+            onChange={(e) => setReportType(e.target.value)}
+          >
+            <option value="">Pilih Jenis Laporan</option>
+            <option value="triwulan">Laporan Triwulan</option>
+            <option value="tahunan">Laporan Tahunan</option>
+          </select>
+          {validationErrors.reportType && (
+            <p className="mt-2 text-sm text-red-600">
+              {validationErrors.reportType}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Tahun Laporan
+          </label>
+          <select
+            className={`text-black mt-1 block w-full py-2 px-3 border ${
+              validationErrors.reportYear ? "border-red-300" : "border-gray-300"
+            } bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+            value={reportYear || ""}
+            onChange={(e) => setReportYear(e.target.value)}
+          >
+            <option value="">Pilih Tahun</option>
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+          {validationErrors.reportYear && (
+            <p className="mt-2 text-sm text-red-600">
+              {validationErrors.reportYear}
+            </p>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -230,12 +343,17 @@ export default function CreateContent() {
                     validationError={validationErrors.sub_menu_id}
                   />
 
-                  {/* Title */}
-                  <TitleInput
-                    title={title}
-                    setTitle={setTitle}
-                    validationError={validationErrors.title}
-                  />
+                  {/* Report Options (Conditional) */}
+                  {renderReportOptions()}
+
+                  {/* Title (kondisional berdasarkan apakah sub menu adalah laporan) */}
+                  {!isReportSubMenu && (
+                    <TitleInput
+                      title={title}
+                      setTitle={setTitle}
+                      validationError={validationErrors.title}
+                    />
+                  )}
 
                   {/* Description Format Selection */}
                   <DescriptionFormatSelector

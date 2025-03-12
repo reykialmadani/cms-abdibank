@@ -11,6 +11,8 @@ type ContentCreateInput = {
   thumbnail?: string
   status?: boolean
   updated_by?: number | null
+  report_type?: string // Menambahkan field untuk jenis laporan
+  report_year?: string // Menambahkan field untuk tahun laporan
 }
 
 type ApiResponse<T> = {
@@ -27,7 +29,7 @@ export default async function handler(
     try {
       const contents = await prisma.content.findMany({
         include: {
-          sub_menu: true 
+          sub_menu: true
         }
       })
       res.status(200).json({ data: contents })
@@ -37,41 +39,56 @@ export default async function handler(
     }
   } else if (req.method === 'POST') {
     try {
-      const { 
-        sub_menu_id, 
-        title, 
-        description, 
-        required_documents, 
-        thumbnail, 
-        status, 
-        updated_by 
+      const {
+        sub_menu_id,
+        title,
+        description,
+        required_documents,
+        thumbnail,
+        status,
+        updated_by,
+        report_type, // Mendapatkan field jenis laporan
+        report_year  // Mendapatkan field tahun laporan
       } = req.body as ContentCreateInput
-      
+
       if (!sub_menu_id || !title) {
         return res.status(400).json({ error: 'sub_menu_id and title are required' })
       }
-      
+
       // Cek apakah sub_menu_id valid
       const submenuExists = await prisma.sub_menu.findUnique({
         where: { id: sub_menu_id }
       })
-      
+
       if (!submenuExists) {
         return res.status(400).json({ error: 'Sub Menu ID tidak valid' })
       }
+
+      // Persiapkan data untuk membuat content baru
+      const contentData: any = {
+        sub_menu_id,
+        title,
+        description: description || null,
+        required_documents: required_documents || null,
+        thumbnail: thumbnail || null,
+        status: status !== undefined ? status : true,
+        updated_by: updated_by || null
+      }
+
+      // Jika ada data laporan, tambahkan ke database
+      if (report_type) {
+        contentData.report_type = report_type
+      }
       
+      if (report_year) {
+        contentData.report_year = report_year
+      }
+
       const newContent = await prisma.content.create({
-        data: {
-          sub_menu_id,
-          title,
-          description: description || null,
-          required_documents: required_documents || null,
-          thumbnail: thumbnail || null,
-          status: status !== undefined ? status : true,
-          updated_by: updated_by || null
-        }
+        data: contentData
       })
-      res.status(201).json({ data: newContent })
+      
+      res.status(201).json({ data: newContent, message: 'Content berhasil dibuat' })
     } catch (error) {
       console.error('Error creating content:', error)
       res.status(400).json({ error: 'Gagal membuat content baru' })

@@ -11,6 +11,8 @@ type ContentUpdateInput = {
   thumbnail?: string | null
   status?: boolean
   updated_by?: number | null
+  report_type?: string | null
+  report_year?: string | null
 }
 
 type ApiResponse<T> = {
@@ -61,7 +63,9 @@ export default async function handler(
         required_documents, 
         thumbnail, 
         status, 
-        updated_by 
+        updated_by,
+        report_type,
+        report_year
       } = req.body as ContentUpdateInput
       
       // Jika sub_menu_id berubah, periksa apakah valid
@@ -85,6 +89,8 @@ export default async function handler(
           ...(thumbnail !== undefined && { thumbnail }),
           ...(status !== undefined && { status }),
           ...(updated_by !== undefined && { updated_by }),
+          ...(report_type !== undefined && { report_type }),
+          ...(report_year !== undefined && { report_year }),
           updated_at: new Date()
         }
       })
