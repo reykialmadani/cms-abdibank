@@ -19,12 +19,6 @@ const ReadTableRow: React.FC<ReadTableRowProps> = ({ item, onDelete }) => {
     });
   };
 
-  // Fungsi untuk mendapatkan deskripsi singkat
-  const getTruncatedDescription = (description: string, length = 80) => {
-    if (description.length <= length) return description;
-    return `${description.substring(0, length)}...`;
-  };
-
   return (
     <tr className="hover:bg-gray-50 transition duration-150 ease-in-out">
       <td className="px-6 py-4">
@@ -32,9 +26,6 @@ const ReadTableRow: React.FC<ReadTableRowProps> = ({ item, onDelete }) => {
           <div className="ml-0">
             <div className="text-sm font-semibold text-gray-900 line-clamp-1">
               {item.title}
-            </div>
-            <div className="text-sm text-gray-500 line-clamp-2 mt-1">
-              {getTruncatedDescription(item.description)}
             </div>
           </div>
         </div>
