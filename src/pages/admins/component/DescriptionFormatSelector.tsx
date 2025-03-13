@@ -10,21 +10,22 @@ interface DescriptionFormatSelectorProps {
   setContent: (content: string) => void;
 }
 
-// Load ReactQuill dynamically to prevent SSR issues
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 const modules = {
   toolbar: [
-    [{ font: [] }, { size: [] }], 
-    ["bold", "italic", "underline"], 
+    [{ font: [] }, { size: [] }],
+    ["bold", "italic", "underline"],
     [{ list: "ordered" }, { list: "bullet" }],
-    [{ align: [] }], 
-    ["link"], 
-    ["clean"], 
+    [{ align: [] }],
+    ["link"],
+    ["clean"],
+    [{ indent: "-1" }, { indent: "+1" }],
   ],
 };
 
-const formats = ["font", "size", "bold", "italic", "underline", "list","align","link"];
+const formats = [
+  "font", "size", "bold", "italic", "underline", "list", "align", "link", "indent"];
 
 const DescriptionFormatSelector = ({ content, setContent }: DescriptionFormatSelectorProps) => {
   return (
