@@ -5,6 +5,7 @@ import axios from "axios";
 // import Image from "next/image";
 import AdminLayout from "@/pages/admins/component/AdminLayout";
 import AlertMessage from "@/pages/admins/component/AlertMessage";
+import "react-quill-new/dist/quill.snow.css"; // Import React Quill styles
 
 interface Menu {
   id: number;
@@ -124,6 +125,37 @@ export default function ContentDetail() {
     }
   };
 
+  // Function to check if the content needs to be parsed from markdown
+  const renderDescription = () => {
+    if (!content) return null;
+    
+    // Create a div element to safely parse the HTML content
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content.description;
+    
+    // Check if content has proper HTML structure or if it's escaped
+    if (tempDiv.querySelector('ol, ul, strong, em, u, p') || 
+        content.description.includes('<ol') || 
+        content.description.includes('<ul') || 
+        content.description.includes('<strong')) {
+      return (
+        <div 
+          className="ql-editor" // Use the actual React Quill editor class
+          dangerouslySetInnerHTML={{ __html: content.description }} 
+        />
+      );
+    } else {
+      // Handle plain text or markdown
+      return (
+        <div>
+          {content.description.split('\n').map((paragraph, idx) => (
+            <p key={idx}>{paragraph}</p>
+          ))}
+        </div>
+      );
+    }
+  };
+
   return (
     <AdminLayout>
       <Head>
@@ -207,11 +239,11 @@ export default function ContentDetail() {
                       </div>
                     )}
                     
-                    {/* Description */}
+                    {/* Description with proper styling for React Quill content */}
                     <div className={`${content.report_type ? 'bg-white' : 'bg-gray-50'} px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6`}>
                       <dt className="text-sm font-medium text-gray-500">Deskripsi</dt>
                       <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                        <div dangerouslySetInnerHTML={{ __html: content.description }} />
+                        {renderDescription()}
                       </dd>
                     </div>
                     
@@ -261,4 +293,4 @@ export default function ContentDetail() {
       </div>
     </AdminLayout>
   );
-}
+} 
