@@ -7,13 +7,12 @@ import AdminLayout from "@/pages/admins/component/AdminLayout";
 import SubMenuSelector from "@/pages/admins/component/SubMenuSelector";
 import TitleInput from "@/pages/admins/component/TitleInput";
 import DescriptionFormatSelector from "@/pages/admins/component/DescriptionFormatSelector";
-import DescriptionEditor from "@/pages/admins/component/DescriptionEditor";
 import RequiredDocumentsInput from "@/pages/admins/component/RequiredDocumentsInput";
 import StatusToggle from "@/pages/admins/component/StatusToggle";
 import AlertMessage from "@/pages/admins/component/AlertMessage";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
-import { DropdownOption, ValidationErrors, ListItem } from "@/types/content";
-import { convertListToHtml, getTextContentLength, generateDescriptionFromList } from "@/utils/contentHelpers";
+import { DropdownOption, ValidationErrors } from "@/types/content";
+import { getTextContentLength } from "@/utils/contentHelpers";
 
 interface SubMenuResponse {
   id: number;
@@ -35,17 +34,9 @@ export default function EditContent() {
   // State for form inputs
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
-  const [descriptionFormat, setDescriptionFormat] = useState<"paragraph" | "nested-list">("paragraph");
   const [requiredDocuments, setRequiredDocuments] = useState<string>("");
   const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
   const [status, setStatus] = useState<boolean>(true);
-  
-  // State for nested list
-  const [listItems, setListItems] = useState<ListItem[]>([{ id: "1", text: "", level: 1, children: [] }]);
-  const [currentListId, setCurrentListId] = useState<number>(2);
-
-  // State for preview
-  const [showPreview, setShowPreview] = useState<boolean>(false);
   
   // State for dropdown options
   const [subMenuOptions, setSubMenuOptions] = useState<DropdownOption[]>([]);
@@ -127,12 +118,6 @@ export default function EditContent() {
           setReportYear(contentData.report_year);
         }
         
-        if (contentData.description.includes('<ul>') || contentData.description.includes('<ol>')) {
-          setDescriptionFormat("nested-list");
-        } else {
-          setDescriptionFormat("paragraph");
-        }
-        
         // Fetch sub menu options
         const subMenuResponse = await axios.get('/api/subMenu', {
           headers: { Authorization: `Bearer ${token}` }
@@ -179,13 +164,8 @@ export default function EditContent() {
       }
     }
     
-    // For nested list, validate total content length
-    if (descriptionFormat === "nested-list") {
-      const htmlContent = convertListToHtml(listItems);
-      if (getTextContentLength(htmlContent) < 20) {
-        errors.description = "Deskripsi harus minimal 20 karakter";
-      }
-    } else if (description.trim().length < 20) {
+    // Validasi deskripsi menggunakan HTML dari React Quill
+    if (!description || getTextContentLength(description) < 20) {
       errors.description = "Deskripsi harus minimal 20 karakter";
     }
     
@@ -194,7 +174,7 @@ export default function EditContent() {
   };
 
   // Prepare form data for submission
-  const prepareFormData = (descriptionContent: string) => {
+  const prepareFormData = () => {
     if (!selectedSubMenu) {
       setError("Sub Menu harus dipilih");
       return null;
@@ -203,7 +183,7 @@ export default function EditContent() {
     // Membuat objek data
     const jsonData: Record<string, any> = {
       sub_menu_id: selectedSubMenu,
-      description: descriptionContent,
+      description: description, // Use description directly from React Quill
       required_documents: requiredDocuments,
       status: status,
     };
@@ -280,33 +260,15 @@ export default function EditContent() {
     e.preventDefault();
 
     try {
-      // Format description based on selected type before validation
-      if (descriptionFormat === "nested-list") {
-        const formattedDesc = generateDescriptionFromList(listItems, descriptionFormat);
+      // Validate form with React Quill data
+      if (!validateForm()) {
+        return;
+      }
 
-        // Store temporarily to not affect the UI
-        const tempDescription = formattedDesc;
-
-        // Check validation with the formatted content
-        if (!validateForm()) {
-          return;
-        }
-
-        // If validation passes, use the formatted content
-        const formData = prepareFormData(tempDescription);
-        if (formData) {
-          await submitForm(formData);
-        }
-      } else {
-        // Regular validation and submission
-        if (!validateForm()) {
-          return;
-        }
-
-        const formData = prepareFormData(description);
-        if (formData) {
-          await submitForm(formData);
-        }
+      // Prepare and submit form data
+      const formData = prepareFormData();
+      if (formData) {
+        await submitForm(formData);
       }
     } catch (err) {
       console.error("Error in form submission:", err);
@@ -443,25 +405,18 @@ export default function EditContent() {
                       />
                     )}
 
-                    {/* Description Format Selection */}
-                    <DescriptionFormatSelector
-                      descriptionFormat={descriptionFormat}
-                      setDescriptionFormat={setDescriptionFormat}
-                    />
-
-                    {/* Description */}
-                    <DescriptionEditor
-                      descriptionFormat={descriptionFormat}
-                      description={description}
-                      setDescription={setDescription}
-                      listItems={listItems}
-                      setListItems={setListItems}
-                      currentListId={currentListId}
-                      setCurrentListId={setCurrentListId}
-                      showPreview={showPreview}
-                      setShowPreview={setShowPreview}
-                      validationError={validationErrors.description}
-                    />
+                    {/* React Quill Editor */}
+                    <div>
+                      <DescriptionFormatSelector 
+                        content={description}
+                        setContent={setDescription}
+                      />
+                      {validationErrors.description && (
+                        <p className="mt-2 text-sm text-red-600">
+                          {validationErrors.description}
+                        </p>
+                      )}
+                    </div>
 
                     {/* Required Documents */}
                     <RequiredDocumentsInput

@@ -6,28 +6,19 @@ import AdminLayout from "@/pages/admins/component/AdminLayout";
 import SubMenuSelector from "@/pages/admins/component/SubMenuSelector";
 import TitleInput from "@/pages/admins/component/TitleInput";
 import DescriptionFormatSelector from "@/pages/admins/component/DescriptionFormatSelector";
-import DescriptionEditor from "@/pages/admins/component/DescriptionEditor";
 import RequiredDocumentsInput from "@/pages/admins/component/RequiredDocumentsInput";
 import StatusToggle from "@/pages/admins/component/StatusToggle";
 import AlertMessage from "@/pages/admins/component/AlertMessage";
-import { DropdownOption, ValidationErrors, ListItem } from "@/types/content";
-import { convertListToHtml, getTextContentLength, generateDescriptionFromList } from "@/utils/contentHelpers";
+import { DropdownOption, ValidationErrors } from "@/types/content";
+import { getTextContentLength } from "@/utils/contentHelpers";
 
 export default function CreateContent() {
   // State untuk form inputs
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
-  const [descriptionFormat, setDescriptionFormat] = useState<"paragraph" | "nested-list">("paragraph");
   const [requiredDocuments, setRequiredDocuments] = useState<string>("");
   const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
   const [status, setStatus] = useState<boolean>(true);
-
-  // State untuk nested list
-  const [listItems, setListItems] = useState<ListItem[]>([{ id: "1", text: "", level: 1, children: [] }]);
-  const [currentListId, setCurrentListId] = useState<number>(2);
-
-  // State untuk preview
-  const [showPreview, setShowPreview] = useState<boolean>(false);
 
   // State untuk dropdown options
   const [subMenuOptions, setSubMenuOptions] = useState<DropdownOption[]>([]);
@@ -121,13 +112,8 @@ export default function CreateContent() {
       }
     }
 
-    // Untuk nested list, validasi total panjang konten
-    if (descriptionFormat === "nested-list") {
-      const htmlContent = convertListToHtml(listItems);
-      if (getTextContentLength(htmlContent) < 20) {
-        errors.description = "Deskripsi harus minimal 20 karakter";
-      }
-    } else if (description.trim().length < 20) {
+    // Validasi deskripsi menggunakan HTML dari React Quill
+    if (!description || getTextContentLength(description) < 20) {
       errors.description = "Deskripsi harus minimal 20 karakter";
     }
 
@@ -136,7 +122,7 @@ export default function CreateContent() {
   };
 
   // Mempersiapkan data form untuk submission
-  const prepareFormData = (descriptionContent: string) => {
+  const prepareFormData = () => {
     if (!selectedSubMenu) {
       setError("Sub Menu harus dipilih");
       return null;
@@ -145,7 +131,7 @@ export default function CreateContent() {
     // Membuat objek data
     const jsonData: Record<string, any> = {
       sub_menu_id: selectedSubMenu,
-      description: descriptionContent,
+      description: description, // Gunakan description dari React Quill
       required_documents: requiredDocuments,
       status: status,
     };
@@ -217,33 +203,15 @@ export default function CreateContent() {
     e.preventDefault();
 
     try {
-      // Format deskripsi berdasarkan tipe yang dipilih sebelum validasi
-      if (descriptionFormat === "nested-list") {
-        const formattedDesc = generateDescriptionFromList(listItems, descriptionFormat);
+      // Validasi form dengan data dari React Quill
+      if (!validateForm()) {
+        return;
+      }
 
-        // Simpan sementara untuk tidak mempengaruhi UI
-        const tempDescription = formattedDesc;
-
-        // Periksa validasi dengan konten yang diformat
-        if (!validateForm()) {
-          return;
-        }
-
-        // Jika validasi lolos, gunakan konten yang diformat
-        const formData = prepareFormData(tempDescription);
-        if (formData) {
-          await submitForm(formData);
-        }
-      } else {
-        // Validasi dan submission reguler
-        if (!validateForm()) {
-          return;
-        }
-
-        const formData = prepareFormData(description);
-        if (formData) {
-          await submitForm(formData);
-        }
+      // Siapkan dan kirim data form
+      const formData = prepareFormData();
+      if (formData) {
+        await submitForm(formData);
       }
     } catch (err) {
       console.error("Error in form submission:", err);
@@ -355,25 +323,18 @@ export default function CreateContent() {
                     />
                   )}
 
-                  {/* Description Format Selection */}
-                  <DescriptionFormatSelector
-                    descriptionFormat={descriptionFormat}
-                    setDescriptionFormat={setDescriptionFormat}
-                  />
-
-                  {/* Description */}
-                  <DescriptionEditor
-                    descriptionFormat={descriptionFormat}
-                    description={description}
-                    setDescription={setDescription}
-                    listItems={listItems}
-                    setListItems={setListItems}
-                    currentListId={currentListId}
-                    setCurrentListId={setCurrentListId}
-                    showPreview={showPreview}
-                    setShowPreview={setShowPreview}
-                    validationError={validationErrors.description}
-                  />
+                  {/* React Quill Editor */}
+                  <div>
+                    <DescriptionFormatSelector 
+                      content={description}
+                      setContent={setDescription}
+                    />
+                    {validationErrors.description && (
+                      <p className="mt-2 text-sm text-red-600">
+                        {validationErrors.description}
+                      </p>
+                    )}
+                  </div>
 
                   {/* Required Documents */}
                   <RequiredDocumentsInput

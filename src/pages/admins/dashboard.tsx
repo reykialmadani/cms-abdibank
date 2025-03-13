@@ -182,7 +182,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow overflow-hidden transition-transform duration-300 hover:shadow-lg hover:transform hover:-translate-y-1">
+            {/* <div className="bg-white rounded-lg shadow overflow-hidden transition-transform duration-300 hover:shadow-lg hover:transform hover:-translate-y-1">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-800">
@@ -218,7 +218,7 @@ export default function Dashboard() {
                   </button>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </main>
 

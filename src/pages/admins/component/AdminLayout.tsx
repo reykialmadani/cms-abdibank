@@ -73,18 +73,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: DocumentTextIcon,
       current: router.pathname.startsWith("/admins/content"),
     },
-    {
-      name: "Menu",
-      href: "/admins/menu",
-      icon: ViewGridIcon,
-      current: router.pathname.startsWith("/admins/menu"),
-    },
-    {
-      name: "Sub Menu",
-      href: "/admins/sub-menu",
-      icon: CollectionIcon,
-      current: router.pathname.startsWith("/admins/sub-menu"),
-    },
+    // {
+    //   name: "Menu",
+    //   href: "/admins/menu",
+    //   icon: ViewGridIcon,
+    //   current: router.pathname.startsWith("/admins/menu"),
+    // },
+    // {
+    //   name: "Sub Menu",
+    //   href: "/admins/sub-menu",
+    //   icon: CollectionIcon,
+    //   current: router.pathname.startsWith("/admins/sub-menu"),
+    // },
   ];
 
   return (
