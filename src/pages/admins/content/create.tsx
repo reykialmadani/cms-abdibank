@@ -33,6 +33,7 @@ export default function CreateContent() {
   const [isReportSubMenu, setIsReportSubMenu] = useState<boolean>(false);
   const [reportType, setReportType] = useState<string | null>(null);
   const [reportYear, setReportYear] = useState<string | null>(null);
+  const [reportQuarter, setReportQuarter] = useState<string | null>(null); // Tambahan untuk triwulan
 
   const router = useRouter();
 
@@ -45,16 +46,15 @@ export default function CreateContent() {
           router.push("/");
           return;
         }
-
         const response: AxiosResponse<{ data: { id: number; sub_menu_name: string }[] }> = await axios.get("/api/subMenu", {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
-
         const options = response.data.data.map((subMenu) => ({
           id: subMenu.id,
           name: subMenu.sub_menu_name,
         }));
-
         setSubMenuOptions(options);
       } catch (err) {
         console.error("Error fetching sub menu options:", err);
@@ -69,25 +69,26 @@ export default function CreateContent() {
     if (selectedSubMenu) {
       const selectedOption = subMenuOptions.find((option) => option.id === selectedSubMenu);
       // Periksa apakah nama sub menu mengandung kata "laporan" (case insensitive)
-      const isReport = selectedOption 
-        ? selectedOption.name.toLowerCase().includes("laporan") 
-        : false;
-      
+      const isReport = selectedOption ? selectedOption.name.toLowerCase().includes("laporan") : false;
       setIsReportSubMenu(isReport);
-      
       if (!isReport) {
         setReportType(null);
         setReportYear(null);
+        setReportQuarter(null);
       }
     } else {
       setIsReportSubMenu(false);
       setReportType(null);
       setReportYear(null);
+      setReportQuarter(null);
     }
   }, [selectedSubMenu, subMenuOptions]);
 
   // Generate tahun untuk pilihan (2021-2025)
   const yearOptions = Array.from({ length: 5 }, (_, i) => String(2021 + i));
+  
+  // Generate opsi triwulan
+  const quarterOptions = ["1", "2", "3", "4"];
 
   // Validasi form sebelum submit
   const validateForm = (): boolean => {
@@ -110,6 +111,11 @@ export default function CreateContent() {
       if (!reportYear) {
         errors.reportYear = "Tahun laporan harus dipilih";
       }
+      
+      // Validasi triwulan jika jenis laporan adalah triwulan
+      if (reportType === "triwulan" && !reportQuarter) {
+        errors.reportQuarter = "Triwulan harus dipilih";
+      }
     }
 
     // Validasi deskripsi menggunakan HTML dari React Quill
@@ -131,16 +137,26 @@ export default function CreateContent() {
     // Membuat objek data
     const jsonData: Record<string, any> = {
       sub_menu_id: selectedSubMenu,
-      description: description, // Gunakan description dari React Quill
+      description: description,
       required_documents: requiredDocuments,
       status: status,
     };
 
-    // Set judul berdasarkan kondisi (laporan atau regular)
+    // Set judul dan data laporan berdasarkan jenis laporan
     if (isReportSubMenu && reportType && reportYear) {
-      jsonData.title = `Laporan ${reportType === 'triwulan' ? 'Triwulan' : 'Tahunan'} ${reportYear}`;
-      jsonData.report_type = reportType;
-      jsonData.report_year = reportYear;
+      // Untuk laporan tahunan
+      if (reportType === "tahunan") {
+        jsonData.title = `LAPORAN TAHUNAN ${reportYear}`;
+        jsonData.report_type = "Tahunan"; 
+        jsonData.report_year = reportYear;
+      } 
+      // Untuk laporan triwulan
+      else if (reportType === "triwulan" && reportQuarter) {
+        jsonData.title = `LAPORAN TRIWULAN ${reportQuarter} TAHUN ${reportYear}`;
+        jsonData.report_type = "Triwulan"; 
+        jsonData.report_year = reportYear;
+        jsonData.report_quarter = reportQuarter;
+      }
     } else {
       jsonData.title = title;
     }
@@ -151,6 +167,9 @@ export default function CreateContent() {
       jsonData.updated_by = parseInt(userId);
     }
 
+    // Debug info
+    console.log("Submitting data:", jsonData);
+    
     return jsonData;
   };
 
@@ -165,7 +184,6 @@ export default function CreateContent() {
 
     try {
       const token = localStorage.getItem("token");
-
       if (!token) {
         router.push("/");
         return;
@@ -179,13 +197,11 @@ export default function CreateContent() {
       });
 
       setSuccess("Content berhasil dibuat!");
-
       setTimeout(() => {
         router.push("/admins/content/read");
       }, 2000);
     } catch (err: any) {
       console.error("Error creating content:", err);
-      
       if (err.response && err.response.data && err.response.data.message) {
         setError(err.response.data.message);
       } else if (err.response && err.response.data && err.response.data.error) {
@@ -201,7 +217,6 @@ export default function CreateContent() {
   // Handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
     try {
       // Validasi form dengan data dari React Quill
       if (!validateForm()) {
@@ -230,11 +245,18 @@ export default function CreateContent() {
             Jenis Laporan
           </label>
           <select
-            className={` text-black mt-1 block w-full py-2 px-3 border ${
-              validationErrors.reportType ? "border-red-300" : "border-gray-300"
-            } bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+            className={`
+              text-black mt-1 block w-full py-2 px-3 border
+              ${validationErrors.reportType ? "border-red-300" : "border-gray-300"}
+              bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm
+            `}
             value={reportType || ""}
-            onChange={(e) => setReportType(e.target.value)}
+            onChange={(e) => {
+              setReportType(e.target.value);
+              if (e.target.value !== "triwulan") {
+                setReportQuarter(null);
+              }
+            }}
           >
             <option value="">Pilih Jenis Laporan</option>
             <option value="triwulan">Laporan Triwulan</option>
@@ -252,9 +274,11 @@ export default function CreateContent() {
             Tahun Laporan
           </label>
           <select
-            className={`text-black mt-1 block w-full py-2 px-3 border ${
-              validationErrors.reportYear ? "border-red-300" : "border-gray-300"
-            } bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+            className={`
+              text-black mt-1 block w-full py-2 px-3 border
+              ${validationErrors.reportYear ? "border-red-300" : "border-gray-300"}
+              bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm
+            `}
             value={reportYear || ""}
             onChange={(e) => setReportYear(e.target.value)}
           >
@@ -271,6 +295,36 @@ export default function CreateContent() {
             </p>
           )}
         </div>
+
+        {/* Opsi Triwulan (hanya muncul jika jenis laporan adalah triwulan) */}
+        {reportType === "triwulan" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Triwulan
+            </label>
+            <select
+              className={`
+                text-black mt-1 block w-full py-2 px-3 border
+                ${validationErrors.reportQuarter ? "border-red-300" : "border-gray-300"}
+                bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm
+              `}
+              value={reportQuarter || ""}
+              onChange={(e) => setReportQuarter(e.target.value)}
+            >
+              <option value="">Pilih Triwulan</option>
+              {quarterOptions.map((quarter) => (
+                <option key={quarter} value={quarter}>
+                  {quarter}
+                </option>
+              ))}
+            </select>
+            {validationErrors.reportQuarter && (
+              <p className="mt-2 text-sm text-red-600">
+                {validationErrors.reportQuarter}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -325,7 +379,7 @@ export default function CreateContent() {
 
                   {/* React Quill Editor */}
                   <div>
-                    <DescriptionFormatSelector 
+                    <DescriptionFormatSelector
                       content={description}
                       setContent={setDescription}
                     />
