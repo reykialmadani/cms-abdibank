@@ -1,8 +1,8 @@
-import type { NextConfig } from "next";
-
+/** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
-  /* config options here */
   reactStrictMode: true,
+  
+  // Headers untuk API routes
   async headers() {
     return [
       {
@@ -24,6 +24,18 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  
+  // Rewrites jika diperlukan
+  async rewrites() {
+    return [
+      // Jika ada keperluan rewrite lainnya
+    ];
+  },
+  
+  // Konfigurasi untuk static files di folder uploads
+  // Pastikan folder uploads dapat diakses sebagai static files
+  // File akan diakses dari /uploads/* path
+  // Ini akan membuat file di public/uploads dapat diakses
 };
 
 export default nextConfig;
