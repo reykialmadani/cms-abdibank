@@ -3,12 +3,12 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import axios, { AxiosResponse } from "axios";
 import AdminLayout from "@/pages/admins/component/AdminLayout";
-import SubMenuSelector from "@/pages/admins/component/SubMenuSelector";
-import TitleInput from "@/pages/admins/component/TitleInput";
-import DescriptionFormatSelector from "@/pages/admins/component/DescriptionFormatSelector";
-import RequiredDocumentsInput from "@/pages/admins/component/RequiredDocumentsInput";
-import StatusToggle from "@/pages/admins/component/StatusToggle";
-import AlertMessage from "@/pages/admins/component/AlertMessage";
+import SubMenuSelector from "@/pages/admins/component/create/SubMenuSelector";
+import TitleInput from "@/pages/admins/component/create/TitleInput";
+import DescriptionFormatSelector from "@/pages/admins/component/create/DescriptionFormatSelector";
+import RequiredDocumentsInput from "@/pages/admins/component/create/RequiredDocumentsInput";
+import StatusToggle from "@/pages/admins/component/create/StatusToggle";
+import AlertMessage from "@/pages/admins/component/create/AlertMessage";
 import { DropdownOption, ValidationErrors } from "@/types/content";
 import { getTextContentLength } from "@/utils/contentHelpers";
 
@@ -27,7 +27,9 @@ export default function CreateContent() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
 
   // State untuk laporan
   const [isReportSubMenu, setIsReportSubMenu] = useState<boolean>(false);
@@ -46,7 +48,9 @@ export default function CreateContent() {
           router.push("/");
           return;
         }
-        const response: AxiosResponse<{ data: { id: number; sub_menu_name: string }[] }> = await axios.get("/api/subMenu", {
+        const response: AxiosResponse<{
+          data: { id: number; sub_menu_name: string }[];
+        }> = await axios.get("/api/subMenu", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -67,9 +71,13 @@ export default function CreateContent() {
   // Cek apakah sub menu yang dipilih adalah laporan
   useEffect(() => {
     if (selectedSubMenu) {
-      const selectedOption = subMenuOptions.find((option) => option.id === selectedSubMenu);
+      const selectedOption = subMenuOptions.find(
+        (option) => option.id === selectedSubMenu
+      );
       // Periksa apakah nama sub menu mengandung kata "laporan" (case insensitive)
-      const isReport = selectedOption ? selectedOption.name.toLowerCase().includes("laporan") : false;
+      const isReport = selectedOption
+        ? selectedOption.name.toLowerCase().includes("laporan")
+        : false;
       setIsReportSubMenu(isReport);
       if (!isReport) {
         setReportType(null);
@@ -86,7 +94,7 @@ export default function CreateContent() {
 
   // Generate tahun untuk pilihan (2021-2025)
   const yearOptions = Array.from({ length: 5 }, (_, i) => String(2021 + i));
-  
+
   // Generate opsi triwulan
   const quarterOptions = ["1", "2", "3", "4"];
 
@@ -107,11 +115,11 @@ export default function CreateContent() {
       if (!reportType) {
         errors.reportType = "Jenis laporan harus dipilih";
       }
-      
+
       if (!reportYear) {
         errors.reportYear = "Tahun laporan harus dipilih";
       }
-      
+
       // Validasi triwulan jika jenis laporan adalah triwulan
       if (reportType === "triwulan" && !reportQuarter) {
         errors.reportQuarter = "Triwulan harus dipilih";
@@ -147,13 +155,13 @@ export default function CreateContent() {
       // Untuk laporan tahunan
       if (reportType === "tahunan") {
         jsonData.title = `LAPORAN TAHUNAN ${reportYear}`;
-        jsonData.report_type = "Tahunan"; 
+        jsonData.report_type = "Tahunan";
         jsonData.report_year = reportYear;
-      } 
+      }
       // Untuk laporan triwulan
       else if (reportType === "triwulan" && reportQuarter) {
         jsonData.title = `LAPORAN TRIWULAN ${reportQuarter} TAHUN ${reportYear}`;
-        jsonData.report_type = "Triwulan"; 
+        jsonData.report_type = "Triwulan";
         jsonData.report_year = reportYear;
         jsonData.report_quarter = reportQuarter;
       }
@@ -169,7 +177,7 @@ export default function CreateContent() {
 
     // Debug info
     console.log("Submitting data:", jsonData);
-    
+
     return jsonData;
   };
 
@@ -247,7 +255,11 @@ export default function CreateContent() {
           <select
             className={`
               text-black mt-1 block w-full py-2 px-3 border
-              ${validationErrors.reportType ? "border-red-300" : "border-gray-300"}
+              ${
+                validationErrors.reportType
+                  ? "border-red-300"
+                  : "border-gray-300"
+              }
               bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm
             `}
             value={reportType || ""}
@@ -276,7 +288,11 @@ export default function CreateContent() {
           <select
             className={`
               text-black mt-1 block w-full py-2 px-3 border
-              ${validationErrors.reportYear ? "border-red-300" : "border-gray-300"}
+              ${
+                validationErrors.reportYear
+                  ? "border-red-300"
+                  : "border-gray-300"
+              }
               bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm
             `}
             value={reportYear || ""}
@@ -305,7 +321,11 @@ export default function CreateContent() {
             <select
               className={`
                 text-black mt-1 block w-full py-2 px-3 border
-                ${validationErrors.reportQuarter ? "border-red-300" : "border-gray-300"}
+                ${
+                  validationErrors.reportQuarter
+                    ? "border-red-300"
+                    : "border-gray-300"
+                }
                 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm
               `}
               value={reportQuarter || ""}
@@ -348,12 +368,8 @@ export default function CreateContent() {
             <div className="bg-white shadow overflow-hidden sm:rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 {/* Alert Messages */}
-                {success && (
-                  <AlertMessage type="success" message={success} />
-                )}
-                {error && (
-                  <AlertMessage type="error" message={error} />
-                )}
+                {success && <AlertMessage type="success" message={success} />}
+                {error && <AlertMessage type="error" message={error} />}
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -405,7 +421,7 @@ export default function CreateContent() {
                   />
 
                   {/* Form Actions */}
-                  <div className="flex justify-end space-x-3">  
+                  <div className="flex justify-end space-x-3">
                     <button
                       type="button"
                       onClick={() => router.push("/admins/content/read")}

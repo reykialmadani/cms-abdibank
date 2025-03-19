@@ -4,12 +4,12 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import axios from "axios";
 import AdminLayout from "@/pages/admins/component/AdminLayout";
-import SubMenuSelector from "@/pages/admins/component/SubMenuSelector";
-import TitleInput from "@/pages/admins/component/TitleInput";
-import DescriptionFormatSelector from "@/pages/admins/component/DescriptionFormatSelector";
-import RequiredDocumentsInput from "@/pages/admins/component/RequiredDocumentsInput";
-import StatusToggle from "@/pages/admins/component/StatusToggle";
-import AlertMessage from "@/pages/admins/component/AlertMessage";
+import SubMenuSelector from "@/pages/admins/component/create/SubMenuSelector";
+import TitleInput from "@/pages/admins/component/create/TitleInput";
+import DescriptionFormatSelector from "@/pages/admins/component/create/DescriptionFormatSelector";
+import RequiredDocumentsInput from "@/pages/admins/component/create/RequiredDocumentsInput";
+import StatusToggle from "@/pages/admins/component/create/StatusToggle";
+import AlertMessage from "@/pages/admins/component/create/AlertMessage";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { DropdownOption, ValidationErrors } from "@/types/content";
 import { getTextContentLength } from "@/utils/contentHelpers";
@@ -37,22 +37,24 @@ export default function EditContent() {
   const [requiredDocuments, setRequiredDocuments] = useState<string>("");
   const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
   const [status, setStatus] = useState<boolean>(true);
-  
+
   // State for dropdown options
   const [subMenuOptions, setSubMenuOptions] = useState<DropdownOption[]>([]);
-  
+
   // State for loading, error, and success
   const [loading, setLoading] = useState<boolean>(false);
   const [initialLoading, setInitialLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
 
   // State untuk laporan
   const [isReportSubMenu, setIsReportSubMenu] = useState<boolean>(false);
   const [reportType, setReportType] = useState<string | null>(null);
   const [reportYear, setReportYear] = useState<string | null>(null);
-  
+
   const router = useRouter();
   const { id } = router.query;
 
@@ -62,14 +64,16 @@ export default function EditContent() {
   // Cek apakah sub menu yang dipilih adalah laporan
   useEffect(() => {
     if (selectedSubMenu) {
-      const selectedOption = subMenuOptions.find((option) => option.id === selectedSubMenu);
+      const selectedOption = subMenuOptions.find(
+        (option) => option.id === selectedSubMenu
+      );
       // Periksa apakah nama sub menu mengandung kata "laporan" (case insensitive)
-      const isReport = selectedOption 
-        ? selectedOption.name.toLowerCase().includes("laporan") 
+      const isReport = selectedOption
+        ? selectedOption.name.toLowerCase().includes("laporan")
         : false;
-      
+
       setIsReportSubMenu(isReport);
-      
+
       if (!isReport) {
         setReportType(null);
         setReportYear(null);
@@ -85,51 +89,52 @@ export default function EditContent() {
   useEffect(() => {
     const fetchContentData = async () => {
       if (!id) return;
-      
+
       try {
         setInitialLoading(true);
-        
-        const token = localStorage.getItem('token');
+
+        const token = localStorage.getItem("token");
         if (!token) {
-          router.push('/');
+          router.push("/");
           return;
         }
 
         // Fetch content detail
         const contentResponse = await axios.get(`/api/content/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const contentData: ContentDetail = contentResponse.data.data;
-        
+
         // Set state from content data
         setTitle(contentData.title);
         setDescription(contentData.description);
         setRequiredDocuments(contentData.required_documents || "");
         setSelectedSubMenu(contentData.sub_menu_id);
         setStatus(contentData.status);
-        
+
         // Set report data if available
         if (contentData.report_type) {
           setReportType(contentData.report_type);
         }
-        
+
         if (contentData.report_year) {
           setReportYear(contentData.report_year);
         }
-        
+
         // Fetch sub menu options
-        const subMenuResponse = await axios.get('/api/subMenu', {
-          headers: { Authorization: `Bearer ${token}` }
+        const subMenuResponse = await axios.get("/api/subMenu", {
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-        const options = subMenuResponse.data.data.map((subMenu: SubMenuResponse) => ({
-          id: subMenu.id,
-          name: subMenu.sub_menu_name
-        }));
+        const options = subMenuResponse.data.data.map(
+          (subMenu: SubMenuResponse) => ({
+            id: subMenu.id,
+            name: subMenu.sub_menu_name,
+          })
+        );
 
         setSubMenuOptions(options);
-        
       } catch (err) {
         console.error("Error fetching content data:", err);
         setError("Terjadi kesalahan saat mengambil data content");
@@ -144,11 +149,11 @@ export default function EditContent() {
   // Validate form before submit
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
-    
+
     if (!isReportSubMenu && title.trim().length < 5) {
       errors.title = "Judul harus minimal 5 karakter";
     }
-    
+
     if (!selectedSubMenu) {
       errors.sub_menu_id = "Sub menu harus dipilih";
     }
@@ -158,17 +163,17 @@ export default function EditContent() {
       if (!reportType) {
         errors.reportType = "Jenis laporan harus dipilih";
       }
-      
+
       if (!reportYear) {
         errors.reportYear = "Tahun laporan harus dipilih";
       }
     }
-    
+
     // Validasi deskripsi menggunakan HTML dari React Quill
     if (!description || getTextContentLength(description) < 20) {
       errors.description = "Deskripsi harus minimal 20 karakter";
     }
-    
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -190,7 +195,9 @@ export default function EditContent() {
 
     // Set judul berdasarkan kondisi (laporan atau regular)
     if (isReportSubMenu && reportType && reportYear) {
-      jsonData.title = `Laporan ${reportType === 'triwulan' ? 'Triwulan' : 'Tahunan'} ${reportYear}`;
+      jsonData.title = `Laporan ${
+        reportType === "triwulan" ? "Triwulan" : "Tahunan"
+      } ${reportYear}`;
       jsonData.report_type = reportType;
       jsonData.report_year = reportYear;
     } else {
@@ -216,36 +223,38 @@ export default function EditContent() {
     setValidationErrors({});
 
     try {
-      const token = localStorage.getItem('token');
-      
+      const token = localStorage.getItem("token");
+
       if (!token) {
-        router.push('/');
+        router.push("/");
         return;
       }
-      
+
       await axios.put(`/api/content/${id}`, formData, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          "Content-Type": "application/json",
+        },
       });
-      
+
       setSuccess("Content berhasil diperbarui!");
-      
+
       // Redirect to content list page after 2 seconds
       setTimeout(() => {
         router.push(`/admins/content/read`);
       }, 2000);
-      
     } catch (err: any) {
       console.error("Error updating content:", err);
-      
+
       if (axios.isAxiosError(err)) {
         // Handle validation errors from server
         if (err.response?.status === 422 && err.response?.data?.errors) {
           setValidationErrors(err.response.data.errors);
         } else {
-          setError(err.response?.data?.message || "Terjadi kesalahan saat mengupdate content");
+          setError(
+            err.response?.data?.message ||
+              "Terjadi kesalahan saat mengupdate content"
+          );
         }
       } else {
         setError("Terjadi kesalahan saat menghubungi server");
@@ -337,7 +346,7 @@ export default function EditContent() {
       <Head>
         <title>Edit Content - Admin Dashboard</title>
       </Head>
-      
+
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="flex items-center mb-4">
@@ -349,10 +358,10 @@ export default function EditContent() {
               Kembali
             </button>
           </div>
-          
+
           <h1 className="text-2xl font-semibold text-gray-900">Edit Content</h1>
         </div>
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
             {initialLoading ? (
@@ -376,13 +385,9 @@ export default function EditContent() {
               <div className="bg-white shadow overflow-hidden sm:rounded-lg">
                 <div className="px-4 py-5 sm:p-6">
                   {/* Alert Messages */}
-                  {success && (
-                    <AlertMessage type="success" message={success} />
-                  )}
-                  {error && (
-                    <AlertMessage type="error" message={error} />
-                  )}
-                  
+                  {success && <AlertMessage type="success" message={success} />}
+                  {error && <AlertMessage type="error" message={error} />}
+
                   {/* Form */}
                   <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Sub Menu Dropdown */}
@@ -407,7 +412,7 @@ export default function EditContent() {
 
                     {/* React Quill Editor */}
                     <div>
-                      <DescriptionFormatSelector 
+                      <DescriptionFormatSelector
                         content={description}
                         setContent={setDescription}
                       />

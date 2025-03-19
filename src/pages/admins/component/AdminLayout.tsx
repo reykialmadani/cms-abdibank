@@ -12,8 +12,7 @@ import {
   XMarkIcon as XIcon,
   DocumentTextIcon,
   ArrowLeftOnRectangleIcon as LogoutIcon,
-  Squares2X2Icon as ViewGridIcon,
-  RectangleStackIcon as CollectionIcon,
+  UserGroupIcon,
   ChevronDownIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -73,12 +72,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: DocumentTextIcon,
       current: router.pathname.startsWith("/admins/content"),
     },
-    // {
-    //   name: "Menu",
-    //   href: "/admins/menu",
-    //   icon: ViewGridIcon,
-    //   current: router.pathname.startsWith("/admins/menu"),
-    // },
+    {
+      name: "Operator",
+      href: "/admins/menu",
+      icon: UserGroupIcon ,
+      current: router.pathname.startsWith("/admins/menu"),
+    },
     // {
     //   name: "Sub Menu",
     //   href: "/admins/sub-menu",

@@ -4,7 +4,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import axios from "axios";
 import AdminLayout from "@/pages/admins/component/AdminLayout";
-import DeleteConfirmationModal from "@/pages/admins/component/DeleteConfirmationModal";
+import DeleteConfirmationModal from "@/pages/admins/component/create/DeleteConfirmationModal";
 import { deleteContent } from "@/utils/contentService";
 
 // Import komponen-komponen terpisah
