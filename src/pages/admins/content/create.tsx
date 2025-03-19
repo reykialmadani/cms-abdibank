@@ -18,7 +18,7 @@ export default function CreateContent() {
   const [description, setDescription] = useState<string>("");
   const [requiredDocuments, setRequiredDocuments] = useState<string>("");
   const [selectedSubMenu, setSelectedSubMenu] = useState<number | null>(null);
-  const [status, setStatus] = useState<boolean>(true);
+  const [status, setStatus] = useState<boolean>(false);
 
   // State untuk dropdown options
   const [subMenuOptions, setSubMenuOptions] = useState<DropdownOption[]>([]);
@@ -33,7 +33,7 @@ export default function CreateContent() {
   const [isReportSubMenu, setIsReportSubMenu] = useState<boolean>(false);
   const [reportType, setReportType] = useState<string | null>(null);
   const [reportYear, setReportYear] = useState<string | null>(null);
-  const [reportQuarter, setReportQuarter] = useState<string | null>(null); // Tambahan untuk triwulan
+  const [reportQuarter, setReportQuarter] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -405,7 +405,7 @@ export default function CreateContent() {
                   />
 
                   {/* Form Actions */}
-                  <div className="flex justify-end space-x-3">
+                  <div className="flex justify-end space-x-3">  
                     <button
                       type="button"
                       onClick={() => router.push("/admins/content/read")}

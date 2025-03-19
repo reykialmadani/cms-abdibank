@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
 
-// Handler utama untuk registrasi
 async function registerHandler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
@@ -21,13 +20,12 @@ async function registerHandler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Username dan password diperlukan' });
   }
 
-  // Validasi panjang password (max 10 karakter sesuai schema)
+  // Validasi panjang password 
   if (password.length > 10) {
     return res.status(400).json({ error: 'Password tidak boleh lebih dari 10 karakter' });
   }
 
   try {
-    // Cek apakah username sudah digunakan
     const existingAdmin = await prisma.admin.findFirst({
       where: { username },
     });
@@ -35,12 +33,9 @@ async function registerHandler(req: NextApiRequest, res: NextApiResponse) {
     if (existingAdmin) {
       return res.status(400).json({ error: 'Username sudah digunakan' });
     }
-
-    // Menghasilkan bearer_token unik
     let uniqueToken: string;
     let tokenExists = true;
-    
-    // Loop untuk memastikan token benar-benar unik
+
     while (tokenExists) {
       uniqueToken = uuidv4();
       const existingToken = await prisma.admin.findFirst({
@@ -66,7 +61,7 @@ async function registerHandler(req: NextApiRequest, res: NextApiResponse) {
         username: true,
         created_at: true,
         updated_at: true,
-        bearer_token: true // password tidak disertakan dalam respons
+        bearer_token: true 
       }
     });
 
@@ -80,15 +75,12 @@ async function registerHandler(req: NextApiRequest, res: NextApiResponse) {
 // Middleware kondisional berdasarkan keberadaan admin
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Cek jumlah admin yang ada
     const adminCount = await prisma.admin.count();
 
-    // Jika belum ada admin, bisa langsung daftar tanpa autentikasi
     if (adminCount === 0) {
       return registerHandler(req, res);
     } 
-    
-    // Jika sudah ada admin, gunakan middleware autentikasi
+
     return authMiddleware(registerHandler)(req, res);
   } catch (error) {
     console.error('Error checking admin count:', error);

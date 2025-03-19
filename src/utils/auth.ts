@@ -4,12 +4,12 @@ import bcrypt from 'bcrypt';
 const JWT_SECRET = process.env.JWT_SECRET || 'BankAbdi@Secret#Key$ForJWT%Tokens&2025!';
 
 export function generateToken(userId: number): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '24h' });
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '5h' });
 }
 
 export function verifyToken(token: string): JwtPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload; // type assertion to JwtPayload
+    return jwt.verify(token, JWT_SECRET) as JwtPayload; 
   } catch (error) {
     console.error('Error verifying token:', error);
     return null;

@@ -9,7 +9,7 @@ import { deleteContent } from "@/utils/contentService";
 
 // Import komponen-komponen terpisah
 import ReadHeader from "../component/read/readHeader";
-import ReadSearch from "../component/read/readSearch";
+// import ReadSearch from "../component/read/readSearch";
 import ReadTable from "../component/read/readTable";
 import ReadPagination from "../component/read/readPagination";
 import AlertMessage from "../component/read/alertMessage";
@@ -184,13 +184,13 @@ export default function ContentList() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
             {/* Search dan filter section */}
-            <ReadSearch
+            {/* <ReadSearch
               search={search}
               totalItems={pagination.total}
               refreshing={refreshing}
               onSearchChange={handleSearchChange}
               onRefresh={handleRefresh}
-            />
+            /> */}
 
             {/* Pesan error */}
             {error && <AlertMessage type="error" message={error} />}
