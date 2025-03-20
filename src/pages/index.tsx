@@ -20,7 +20,7 @@ export default function Login() {
   }, [router]);
 
   // Modifikasi handleSubmit pada pages/index.tsx
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     setError("");
     setLoading(true);

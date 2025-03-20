@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const nextConfig: NextConfig = {
+const nextConfig = {
   reactStrictMode: true,
   
   // Headers untuk API routes
@@ -10,10 +10,10 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         headers: [
           { key: "Access-Control-Allow-Credentials", value: "true" },
-          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Origin", value: "http://localhost:3000" }, // Ganti wildcard dengan URL frontend
           {
             key: "Access-Control-Allow-Methods",
-            value: "GET,DELETE,PATCH,POST,PUT",
+            value: "GET,DELETE,PATCH,POST,PUT,OPTIONS", // Tambahkan OPTIONS untuk preflight request
           },
           {
             key: "Access-Control-Allow-Headers",
