@@ -27,26 +27,33 @@ interface NavItem {
   href: string;
   icon: (props: React.ComponentProps<"svg">) => JSX.Element;
   current: boolean;
+  requiredRole?: string[]; // Menambahkan properti untuk kontrol akses berdasarkan role
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [username, setUsername] = useState<string>("");
   const [contentMenuOpen, setContentMenuOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string>(""); // State untuk menyimpan role pengguna
   const router = useRouter();
 
   // Check authentication on mount
   useEffect(() => {
     const token = localStorage.getItem("token");
     const adminUsername = localStorage.getItem("adminUsername");
-
+    const role = localStorage.getItem("adminRole"); // Tambahkan pembacaan role
+    
     if (!token) {
       router.push("/");
       return;
     }
-
+    
     if (adminUsername) {
       setUsername(adminUsername);
+    }
+    
+    if (role) {
+      setUserRole(role);
     }
   }, [router]);
 
@@ -55,6 +62,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     localStorage.removeItem("token");
     localStorage.removeItem("adminId");
     localStorage.removeItem("adminUsername");
+    localStorage.removeItem("adminRole"); // Tambahkan penghapusan role
     router.push("/");
   };
 
@@ -74,17 +82,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     },
     {
       name: "Operator",
-      href: "/admins/menu",
-      icon: UserGroupIcon ,
-      current: router.pathname.startsWith("/admins/menu"),
+      href: "/admins/operator", // Perbaikan path untuk halaman operator
+      icon: UserGroupIcon,
+      current: router.pathname.startsWith("/admins/operator"),
+      requiredRole: ["admin"], // Hanya admin yang boleh mengakses
     },
-    // {
-    //   name: "Sub Menu",
-    //   href: "/admins/sub-menu",
-    //   icon: CollectionIcon,
-    //   current: router.pathname.startsWith("/admins/sub-menu"),
-    // },
   ];
+
+  // Filter navigasi berdasarkan role
+  const filteredNavigation = navigation.filter(
+    (item) => !item.requiredRole || item.requiredRole.includes(userRole)
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -125,7 +133,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <XIcon className="h-6 w-6" aria-hidden="true" />
           </button>
         </div>
-
         <nav className="flex-1 pt-4 pb-4 overflow-y-auto">
           <div className="px-4 mb-6">
             <div className="flex items-center p-3 bg-blue-50 rounded-lg">
@@ -133,14 +140,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <UserCircleIcon className="h-6 w-6 text-blue-500" />
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-800">{username || "Admin"}</p>
-                <p className="text-xs text-gray-500">Administrator</p>
+                <p className="text-sm font-medium text-gray-800">{username || "User"}</p>
+                <p className="text-xs text-gray-500">
+                  {userRole === "admin" ? "Administrator" : "Operator"}
+                </p>
               </div>
             </div>
           </div>
-
           <div className="px-2 space-y-1">
-            {navigation.map((item) => (
+            {filteredNavigation.map((item) => (
               <div key={item.name}>
                 {item.name === "Content" ? (
                   <>
@@ -167,12 +175,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         } ${item.current ? "text-blue-500" : "text-gray-500"}`}
                       />
                     </button>
-
                     <div
                       className={`overflow-hidden transition-all duration-300 ${
-                        contentMenuOpen
-                          ? "max-h-40 opacity-100"
-                          : "max-h-0 opacity-0"
+                        contentMenuOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
                       }`}
                     >
                       <div className="pl-12 py-2 space-y-2">
@@ -212,7 +217,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </div>
             ))}
           </div>
-
           <div className="px-2 mt-6">
             <button
               onClick={handleLogout}
@@ -236,7 +240,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             height={28}
           />
         </div>
-
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="px-4 mt-6 mb-6">
             <div className="flex items-center p-3 bg-blue-50 rounded-lg">
@@ -244,15 +247,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <UserCircleIcon className="h-6 w-6 text-blue-500" />
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-800">{username || "Admin"}</p>
-                <p className="text-xs text-gray-500">Administrator</p>
+                <p className="text-sm font-medium text-gray-800">{username || "User"}</p>
+                <p className="text-xs text-gray-500">
+                  {userRole === "admin" ? "Administrator" : "Operator"}
+                </p>
               </div>
             </div>
           </div>
-
           <nav className="px-3 pt-2 pb-5 flex-1 overflow-y-auto">
             <div className="space-y-1">
-              {navigation.map((item) => (
+              {filteredNavigation.map((item) => (
                 <div key={item.name}>
                   {item.name === "Content" ? (
                     <>
@@ -279,12 +283,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           } ${item.current ? "text-blue-500" : "text-gray-500"}`}
                         />
                       </button>
-
                       <div
                         className={`overflow-hidden transition-all duration-300 ${
-                          contentMenuOpen
-                            ? "max-h-40 opacity-100"
-                            : "max-h-0 opacity-0"
+                          contentMenuOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
                         }`}
                       >
                         <div className="pl-11 py-2 space-y-1">
@@ -324,7 +325,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </div>
               ))}
             </div>
-
             <div className="pt-5 mt-5 border-t border-gray-100">
               <button
                 onClick={handleLogout}
@@ -351,15 +351,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <span className="sr-only">Open sidebar</span>
               <MenuIcon className="h-6 w-6" aria-hidden="true" />
             </button>
-
             <div className="flex-1 flex justify-between items-center">
               <h1 className="text-xl font-semibold text-gray-800 ml-2 md:ml-0">
                 {/* Display current page name based on route */}
-                {navigation.find((item) => item.current)?.name || "Dashboard"}
+                {filteredNavigation.find((item) => item.current)?.name || "Dashboard"}
               </h1>
-
               <div className="flex items-center space-x-4">
-                {/* You can add notification icon or other header items here */}
                 <div className="hidden md:flex items-center space-x-2">
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                     <span className="text-blue-600 font-medium">
@@ -374,9 +371,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="py-6 px-4 sm:px-6 lg:px-8">
-            {children}
-          </div>
+          <div className="py-6 px-4 sm:px-6 lg:px-8">{children}</div>
         </main>
       </div>
     </div>

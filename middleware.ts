@@ -24,8 +24,6 @@ export function middleware(req: NextRequest) {
 
   return res;
 }
-
-// Middleware hanya diterapkan pada route API
 export const config = {
   matcher: "/api/*",
 };

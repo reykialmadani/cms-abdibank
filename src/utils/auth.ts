@@ -3,13 +3,20 @@ import bcrypt from 'bcrypt';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'BankAbdi@Secret#Key$ForJWT%Tokens&2025!';
 
-export function generateToken(userId: number): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '5h' });
+// Modifikasi tipe payload untuk menyertakan role
+interface TokenPayload extends JwtPayload {
+  userId: number;
+  role?: string;
 }
 
-export function verifyToken(token: string): JwtPayload | null {
+export function generateToken(userId: number, role?: string): string {
+  // Menyertakan role dalam token jika tersedia
+  return jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: '5h' });
+}
+
+export function verifyToken(token: string): TokenPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload; 
+    return jwt.verify(token, JWT_SECRET) as TokenPayload;
   } catch (error) {
     console.error('Error verifying token:', error);
     return null;
@@ -29,7 +36,7 @@ export async function comparePassword(plainPassword: string, hashedPassword: str
     return match;
   } catch (error) {
     console.error('Error comparing passwords:', error);
-    // Jika terjadi error pada perbandingan (misalnya format hash tidak valid), 
+    // Jika terjadi error pada perbandingan (misalnya format hash tidak valid),
     // kita return false sebagai fallback yang aman
     return false;
   }

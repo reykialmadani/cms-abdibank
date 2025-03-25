@@ -1,4 +1,4 @@
-// pages/api/auth/login.ts 
+// pages/api/auth/login.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
 import { generateToken, comparePassword } from '../../../utils/auth';
@@ -12,9 +12,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   console.log("Request body:", req.body);
-  
   const { username, password } = req.body;
-  
+
   if (!username || !password) {
     console.log("Input tidak lengkap:", { username: !!username, password: !!password });
     return res.status(400).json({ error: 'Username dan password diperlukan' });
@@ -25,10 +24,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: { username },
     });
 
-    console.log("Admin ditemukan:", admin ? {
-      id: admin.id,
-      username: admin.username,
-      passwordPrefix: admin.password ? admin.password.substring(0, 10) + '...' : 'tidak ada'
+    console.log("Admin ditemukan:", admin ? { 
+      id: admin.id, 
+      username: admin.username, 
+      passwordPrefix: admin.password ? admin.password.substring(0, 10) + '...' : 'tidak ada',
+      role: admin.role || 'admin' // Log role jika ada
     } : "Admin tidak ditemukan");
 
     if (!admin) {
@@ -36,26 +36,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const isPasswordValid = await comparePassword(password, admin.password);
-    
-    console.log("Hasil perbandingan password:", {
-      inputPassword: password ? '**** (tidak ditampilkan)' : 'kosong',
-      isValid: isPasswordValid
+    console.log("Hasil perbandingan password:", { 
+      inputPassword: password ? '**** (tidak ditampilkan)' : 'kosong', 
+      isValid: isPasswordValid 
     });
-    
+
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Username atau password tidak valid (password tidak cocok)' });
     }
 
-    // Generate token
-    const token = generateToken(admin.id);
-    
-    // Kirim token ke client
+    // Generate token dengan role
+    const token = generateToken(admin.id, admin.role);
+
+    // Kirim token dan informasi admin termasuk role ke client
     return res.status(200).json({ 
-      token,
-      admin: {
-        id: admin.id,
-        username: admin.username
-      }
+      token, 
+      admin: { 
+        id: admin.id, 
+        username: admin.username,
+        role: admin.role || 'admin'
+      } 
     });
   } catch (error) {
     console.error("Login error:", error);

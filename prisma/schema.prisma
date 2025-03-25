@@ -11,6 +11,7 @@ model admin {
   id           Int       @id @default(autoincrement())
   username     String    @db.VarChar(255)
   password     String    @unique @db.VarChar(70)
+  role         String    @default("admin")
   created_at   DateTime? @default(now()) @db.Timestamp(6)
   updated_at   DateTime? @default(now()) @db.Timestamp(6)
   bearer_token String?   @unique @default(dbgenerated("gen_random_uuid()"))
