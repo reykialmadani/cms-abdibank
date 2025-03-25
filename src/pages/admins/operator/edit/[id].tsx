@@ -51,7 +51,7 @@ export default function EditOperator() {
         return;
       }
 
-      const response = await axios.get(`/api/admins/operators/${operatorId}`, {
+      const response = await axios.get(`/api/admin/operators/${operatorId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
