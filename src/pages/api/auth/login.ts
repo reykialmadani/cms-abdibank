@@ -24,11 +24,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: { username },
     });
 
-    console.log("Admin ditemukan:", admin ? { 
-      id: admin.id, 
-      username: admin.username, 
+    console.log("Admin ditemukan:", admin ? {
+      id: admin.id,
+      username: admin.username,
       passwordPrefix: admin.password ? admin.password.substring(0, 10) + '...' : 'tidak ada',
-      role: admin.role || 'admin' // Log role jika ada
+      role: admin.role || 'admin'
     } : "Admin tidak ditemukan");
 
     if (!admin) {
@@ -36,9 +36,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const isPasswordValid = await comparePassword(password, admin.password);
-    console.log("Hasil perbandingan password:", { 
-      inputPassword: password ? '**** (tidak ditampilkan)' : 'kosong', 
-      isValid: isPasswordValid 
+    console.log("Hasil perbandingan password:", {
+      inputPassword: password ? '**** (tidak ditampilkan)' : 'kosong',
+      isValid: isPasswordValid
     });
 
     if (!isPasswordValid) {
@@ -47,15 +47,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Generate token dengan role
     const token = generateToken(admin.id, admin.role);
+    
+    // Update bearer_token di database
+    await prisma.admin.update({
+      where: { id: admin.id },
+      data: {
+        bearer_token: token,
+        updated_at: new Date()
+      }
+    });
 
     // Kirim token dan informasi admin termasuk role ke client
-    return res.status(200).json({ 
-      token, 
-      admin: { 
-        id: admin.id, 
+    return res.status(200).json({
+      token,
+      admin: {
+        id: admin.id,
         username: admin.username,
         role: admin.role || 'admin'
-      } 
+      }
     });
   } catch (error) {
     console.error("Login error:", error);

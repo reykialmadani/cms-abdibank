@@ -1,6 +1,7 @@
 // middleware/auth.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
+import { verifyToken } from '@/utils/auth';
 
 const prisma = new PrismaClient();
 
@@ -8,7 +9,7 @@ declare module 'next' {
   interface NextApiRequest {
     user?: {
       userId: number;
-      role: string; // Tambahkan role
+      role: string;
     };
   }
 }
@@ -18,29 +19,42 @@ type HandlerFunction = (req: NextApiRequest, res: NextApiResponse) => Promise<vo
 export function authMiddleware(handler: HandlerFunction) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     const authHeader = req.headers.authorization;
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Token autentikasi diperlukan' });
     }
-    
-    const bearerToken = authHeader.split(' ')[1];
-    if (!bearerToken) {
+
+    const token = authHeader.split(' ')[1];
+
+    if (!token) {
       return res.status(401).json({ error: 'Token tidak valid' });
     }
-    
+
     try {
-      const admin = await prisma.admin.findFirst({
-        where: { bearer_token: bearerToken },
-      });
+      // Verifikasi token dengan JWT
+      const payload = verifyToken(token);
       
-      if (!admin) {
+      if (!payload) {
         return res.status(401).json({ error: 'Token tidak valid atau sudah kadaluarsa' });
       }
       
+      // Verifikasi token ada di database
+      const admin = await prisma.admin.findFirst({
+        where: { 
+          id: payload.userId,
+          bearer_token: token 
+        },
+      });
+
+      if (!admin) {
+        return res.status(401).json({ error: 'Token tidak valid atau sudah kadaluarsa' });
+      }
+
       req.user = {
-        userId: admin.id,
-        role: admin.role // Tambahkan role
+        userId: payload.userId,
+        role: payload.role || 'admin'
       };
-      
+
       return handler(req, res);
     } catch (error) {
       console.error('Error verifying bearer token:', error);
