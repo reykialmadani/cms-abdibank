@@ -1,4 +1,3 @@
-// pages/admins/operator/create.tsx
 import { useState, useEffect } from "react";
 import Head from "next/head";
 import Link from "next/link";
@@ -11,13 +10,12 @@ export default function CreateOperator() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState("operator"); // Default role adalah operator
+  const [role, setRole] = useState("operator");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const router = useRouter();
 
-  // Periksa apakah pengguna adalah admin
   useEffect(() => {
     const userRole = localStorage.getItem("adminRole");
     if (userRole !== "admin") {
@@ -51,7 +49,7 @@ export default function CreateOperator() {
       );
 
       setSuccess(true);
-      // Reset form
+
       setUsername("");
       setPassword("");
       setConfirmPassword("");
@@ -78,143 +76,125 @@ export default function CreateOperator() {
         <title>Tambah Operator Baru - Dashboard Admin</title>
       </Head>
 
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h3 className="text-lg font-medium leading-6 text-gray-900">
-            Tambah Operator Baru
-          </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Buat akun operator baru untuk mengelola konten
+      <div className="bg-white shadow-lg rounded-xl overflow-hidden">
+        <div className="px-6 py-6 border-b border-gray-200">
+          <h3 className="text-2xl font-semibold text-gray-800">Tambah Operator Baru</h3>
+          <p className="mt-2 text-sm text-gray-500">
+            Buat akun operator baru untuk mengelola konten.
           </p>
         </div>
 
-        <div className="px-4 py-5 sm:p-6">
+        <div className="px-6 py-6">
           {success && (
             <div className="mb-6 bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <CheckCircleIcon className="h-5 w-5 text-green-400" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-green-700">
-                    Operator berhasil ditambahkan! Mengalihkan kembali ke daftar operator...
-                  </p>
-                </div>
+              <div className="flex items-center">
+                <CheckCircleIcon className="h-6 w-6 text-green-400" />
+                <span className="ml-3 text-lg font-medium text-green-700">
+                  Operator berhasil ditambahkan!
+                </span>
               </div>
             </div>
           )}
 
           {error && (
             <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <ExclamationCircleIcon className="h-5 w-5 text-red-400" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
+              <div className="flex items-center">
+                <ExclamationCircleIcon className="h-6 w-6 text-red-400" />
+                <span className="ml-3 text-lg font-medium text-red-700">{error}</span>
               </div>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
+            <div className="space-y-2">
               <label
                 htmlFor="username"
                 className="block text-sm font-medium text-gray-700"
               >
                 Username
               </label>
-              <div className="mt-1">
-                <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  className="text-black shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  placeholder="Masukkan username"
-                />
-              </div>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                className="text-black block w-full p-3 rounded-md border-2 border-gray-300 focus:ring-blue-500 focus:border-blue-500 transition ease-in-out"
+                placeholder="Masukkan username"
+              />
             </div>
 
-            <div>
+            <div className="space-y-2">
               <label
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700"
               >
                 Password
               </label>
-              <div className="mt-1">
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="text-black shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  placeholder="Masukkan password"
-                />
-              </div>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="text-black block w-full p-3 rounded-md border-2 border-gray-300 focus:ring-blue-500 focus:border-blue-500 transition ease-in-out"
+                placeholder="Masukkan password"
+              />
             </div>
 
-            <div>
+            <div className="space-y-2">
               <label
                 htmlFor="confirmPassword"
                 className="block text-sm font-medium text-gray-700"
               >
                 Konfirmasi Password
               </label>
-              <div className="mt-1">
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="text-black shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  placeholder="Konfirmasi password"
-                />
-              </div>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className="text-black block w-full p-3 rounded-md border-2 border-gray-300 focus:ring-blue-500 focus:border-blue-500 transition ease-in-out"
+                placeholder="Konfirmasi password"
+              />
             </div>
 
-            <div>
+            <div className="space-y-2">
               <label
                 htmlFor="role"
                 className="block text-sm font-medium text-gray-700"
               >
                 Role
               </label>
-              <div className="mt-1">
-                <select
-                  id="role"
-                  name="role"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="text-black shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                >
-                  <option value="operator">Operator</option>
-                </select>
-              </div>
+              <select
+                id="role"
+                name="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="text-black block w-full p-3 rounded-md border-2 border-gray-300 focus:ring-blue-500 focus:border-blue-500 transition ease-in-out"
+              >
+                <option value="operator">Operator</option>
+              </select>
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-between mt-6">
               <Link
                 href="/admins/operator"
-                className="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="px-6 py-3 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition ease-in-out"
               >
                 Batal
               </Link>
               <button
                 type="submit"
                 disabled={loading}
-                className={`py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                className={`px-6 py-3 text-sm font-medium text-white rounded-lg transition ease-in-out focus:outline-none ${
                   loading
                     ? "bg-blue-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    : "bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500"
                 }`}
               >
                 {loading ? (

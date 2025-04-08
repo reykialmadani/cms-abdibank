@@ -1,8 +1,7 @@
 // pages/api/storage/[filename].ts
-
 import { NextApiRequest, NextApiResponse } from 'next';
-import path from 'path';
-import fs from 'fs';
+// import path from 'path';
+// import fs from 'fs';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const { filename } = req.query;
