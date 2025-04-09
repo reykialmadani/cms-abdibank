@@ -10,7 +10,7 @@ interface TokenPayload extends JwtPayload {
 }
 
 export function generateToken(userId: number, role?: string): string {
-  // Menyertakan role dalam token jika tersedia
+  // Menyertakan role dalam token jika tersedia 
   return jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: '5h' });
 }
 

@@ -4,7 +4,6 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import Image from "next/image";
-
 // Icons
 import {
   HomeIcon,
@@ -15,7 +14,10 @@ import {
   UserGroupIcon,
   ChevronDownIcon,
   UserCircleIcon,
+  KeyIcon, 
 } from "@heroicons/react/24/outline";
+
+import ChangePasswordModal from "../component/ChagePasswordModal"; 
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -27,22 +29,25 @@ interface NavItem {
   href: string;
   icon: (props: React.ComponentProps<"svg">) => JSX.Element;
   current: boolean;
-  requiredRole?: string[]; // Menambahkan properti untuk kontrol akses berdasarkan role
+  requiredRole?: string[]; 
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [username, setUsername] = useState<string>("");
   const [contentMenuOpen, setContentMenuOpen] = useState(false);
-  const [userRole, setUserRole] = useState<string>(""); // State untuk menyimpan role pengguna
+  const [userRole, setUserRole] = useState<string>("");
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false); 
+  const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false); 
+  
   const router = useRouter();
 
   // Check authentication on mount
   useEffect(() => {
     const token = localStorage.getItem("token");
     const adminUsername = localStorage.getItem("adminUsername");
-    const role = localStorage.getItem("adminRole"); // Tambahkan pembacaan role
-    
+    const role = localStorage.getItem("adminRole");
+
     if (!token) {
       router.push("/");
       return;
@@ -62,11 +67,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     localStorage.removeItem("token");
     localStorage.removeItem("adminId");
     localStorage.removeItem("adminUsername");
-    localStorage.removeItem("adminRole"); // Tambahkan penghapusan role
+    localStorage.removeItem("adminRole");
     router.push("/");
   };
 
-  // Navigation items with dynamic 'current' property
   const navigation: NavItem[] = [
     {
       name: "Dashboard",
@@ -82,10 +86,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     },
     {
       name: "Operator",
-      href: "/admins/operator", // Perbaikan path untuk halaman operator
+      href: "/admins/operator",
       icon: UserGroupIcon,
       current: router.pathname.startsWith("/admins/operator"),
-      requiredRole: ["admin"], // Hanya admin yang boleh mengakses
+      requiredRole: ["admin"],
     },
   ];
 
@@ -94,12 +98,26 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     (item) => !item.requiredRole || item.requiredRole.includes(userRole)
   );
 
+  // Fungsi untuk membuka modal ganti password
+  const openChangePasswordModal = () => {
+    setChangePasswordModalOpen(true);
+    setProfileMenuOpen(false); 
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <Head>
         <title>Admin Dashboard</title>
         <meta name="description" content="Admin dashboard" />
       </Head>
+
+      {/* Modal Ganti Password */}
+      {changePasswordModalOpen && (
+        <ChangePasswordModal
+          isOpen={changePasswordModalOpen}
+          onClose={() => setChangePasswordModalOpen(false)}
+        />
+      )}
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -139,14 +157,38 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <div className="p-2 rounded-full bg-blue-100">
                 <UserCircleIcon className="h-6 w-6 text-blue-500" />
               </div>
-              <div className="ml-3">
+              <div className="ml-3 flex-grow">
                 <p className="text-sm font-medium text-gray-800">{username || "User"}</p>
                 <p className="text-xs text-gray-500">
                   {userRole === "admin" ? "Administrator" : "Operator"}
                 </p>
               </div>
+              <button 
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="p-1 rounded-full hover:bg-blue-100"
+              >
+                <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${
+                  profileMenuOpen ? "transform rotate-180" : ""
+                } text-blue-500`}/>
+              </button>
+            </div>
+            
+            {/* Menu Profil Mobile */}
+            <div className={`overflow-hidden transition-all duration-300 ${
+              profileMenuOpen ? "max-h-20 opacity-100 mt-2" : "max-h-0 opacity-0"
+            }`}>
+              <div className="bg-white rounded-lg shadow-sm">
+                <button
+                  onClick={openChangePasswordModal}
+                  className="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <KeyIcon className="h-4 w-4 mr-2 text-gray-500" />
+                  Ganti Password
+                </button>
+              </div>
             </div>
           </div>
+
           <div className="px-2 space-y-1">
             {filteredNavigation.map((item) => (
               <div key={item.name}>
@@ -222,7 +264,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               onClick={handleLogout}
               className="w-full flex items-center px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors duration-150"
             >
-              <LogoutIcon className="mr-3 flex-shrink-0 h-5 w-5" aria-hidden="true" />
+              <LogoutIcon
+                className="mr-3 flex-shrink-0 h-5 w-5"
+                aria-hidden="true"
+              />
               Logout
             </button>
           </div>
@@ -246,11 +291,34 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <div className="p-2 rounded-full bg-blue-100">
                 <UserCircleIcon className="h-6 w-6 text-blue-500" />
               </div>
-              <div className="ml-3">
+              <div className="ml-3 flex-grow">
                 <p className="text-sm font-medium text-gray-800">{username || "User"}</p>
                 <p className="text-xs text-gray-500">
                   {userRole === "admin" ? "Administrator" : "Operator"}
                 </p>
+              </div>
+              <button 
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="p-1 rounded-full hover:bg-blue-100"
+              >
+                <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${
+                  profileMenuOpen ? "transform rotate-180" : ""
+                } text-blue-500`}/>
+              </button>
+            </div>
+            
+            {/* Menu Profil Desktop */}
+            <div className={`overflow-hidden transition-all duration-300 ${
+              profileMenuOpen ? "max-h-20 opacity-100 mt-2" : "max-h-0 opacity-0"
+            }`}>
+              <div className="bg-white rounded-lg shadow-sm">
+                <button
+                  onClick={openChangePasswordModal}
+                  className="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <KeyIcon className="h-4 w-4 mr-2 text-gray-500" />
+                  Ganti Password
+                </button>
               </div>
             </div>
           </div>
@@ -330,7 +398,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 onClick={handleLogout}
                 className="w-full flex items-center px-3 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors duration-150"
               >
-                <LogoutIcon className="mr-3 flex-shrink-0 h-5 w-5" aria-hidden="true" />
+                <LogoutIcon
+                  className="mr-3 flex-shrink-0 h-5 w-5"
+                  aria-hidden="true"
+                />
                 Logout
               </button>
             </div>
@@ -358,10 +429,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </h1>
               <div className="flex items-center space-x-4">
                 <div className="hidden md:flex items-center space-x-2">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="text-blue-600 font-medium">
-                      {username ? username.charAt(0).toUpperCase() : "A"}
-                    </span>
+                  <div className="relative">
+                    <button
+                      className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center"
+                      onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                    >
+                      <span className="text-blue-600 font-medium">
+                        {username ? username.charAt(0).toUpperCase() : "A"}
+                      </span>
+                    </button>
                   </div>
                 </div>
               </div>
