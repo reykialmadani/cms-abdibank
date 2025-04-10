@@ -6,13 +6,12 @@ import { useRouter } from "next/router";
 import AdminLayout from "../component/AdminLayout";
 import axios from "axios";
 import { 
-  PencilIcon, 
   TrashIcon, 
   PlusIcon, 
   MagnifyingGlassIcon, 
   ArrowUpIcon,
   ArrowDownIcon,
-  UserGroupIcon,
+  UserGroupIcon,  
   ExclamationTriangleIcon,
   XMarkIcon
 } from "@heroicons/react/24/outline";
@@ -355,12 +354,12 @@ export default function OperatorManagement() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
-                        <Link
+                        {/* <Link
                           href={`/admins/operator/edit/${operator.id}`}
                           className="text-blue-600 hover:text-blue-900 bg-blue-50 p-2 rounded-lg hover:bg-blue-100 transition-colors duration-150"
                         >
                           <PencilIcon className="h-4 w-4" />
-                        </Link>
+                        </Link> */}
                         <button
                           onClick={() => confirmDelete(operator.id)}
                           className="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded-lg hover:bg-red-100 transition-colors duration-150"

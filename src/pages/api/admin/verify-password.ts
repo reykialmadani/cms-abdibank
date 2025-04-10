@@ -1,30 +1,16 @@
-// pages/api/admins/verify-password.ts
+// pages/api/admin/verify-password.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
-import { verifyToken, comparePassword } from '../../../utils/auth';
+import { comparePassword } from '../../../utils/auth';
+import { authMiddleware } from '../../../middleware/auth';
 
 const prisma = new PrismaClient();
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Hanya menerima metode POST
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ message: `Metode ${req.method} tidak diizinkan` });
-  }
-
-  // Cek otentikasi
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Autentikasi diperlukan' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  const payload = verifyToken(token);
-  if (!payload || !payload.userId) {
-    return res.status(401).json({ message: 'Token tidak valid' });
   }
 
   try {
@@ -38,7 +24,7 @@ export default async function handler(
 
     // Validasi bahwa ID dari token dan ID yang akan diverifikasi sama
     // (hanya bisa memverifikasi password sendiri)
-    if (Number(payload.userId) !== Number(adminId)) {
+    if (Number(req.user?.userId) !== Number(adminId)) {
       return res.status(403).json({ message: 'Anda hanya dapat memverifikasi password akun Anda sendiri' });
     }
 
@@ -53,7 +39,6 @@ export default async function handler(
 
     // Verifikasi password
     const isPasswordValid = await comparePassword(password, admin.password);
-
     return res.status(200).json({ valid: isPasswordValid });
   } catch (error) {
     console.error('Error saat verifikasi password:', error);
@@ -62,3 +47,5 @@ export default async function handler(
     await prisma.$disconnect();
   }
 }
+
+export default authMiddleware(handler);
