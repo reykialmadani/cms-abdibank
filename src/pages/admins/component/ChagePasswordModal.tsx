@@ -1,23 +1,24 @@
 // components/modals/ChangePasswordModal.tsx
 import { Fragment, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { XMarkIcon, LockClosedIcon, KeyIcon, CheckCircleIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, LockClosedIcon, KeyIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import axios from "axios";
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess: (message: string) => void;
 }
 
 export default function ChangePasswordModal({
   isOpen,
   onClose,
+  onSuccess,
 }: ChangePasswordModalProps) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const resetForm = () => {
@@ -25,7 +26,6 @@ export default function ChangePasswordModal({
     setNewPassword("");
     setConfirmPassword("");
     setError("");
-    setSuccess("");
   };
 
   const handleClose = () => {
@@ -36,21 +36,23 @@ export default function ChangePasswordModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
 
     // Validasi form
     if (!currentPassword || !newPassword || !confirmPassword) {
       setError("Semua kolom harus diisi");
       return;
     }
+
     if (newPassword !== confirmPassword) {
       setError("Password baru dan konfirmasi password tidak cocok");
       return;
     }
+
     if (newPassword.length < 8) {
       setError("Password baru minimal 8 karakter");
       return;
     }
+
     if (newPassword.length > 10) {
       setError("Password baru maksimal 10 karakter");
       return;
@@ -88,24 +90,21 @@ export default function ChangePasswordModal({
       );
 
       if (response.status === 200) {
-        setSuccess("Password berhasil diubah");
-        // Reset form setelah berhasil
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        // Tutup modal setelah 2 detik
-        setTimeout(() => {
-          handleClose();
-        }, 2000);
+        // Panggil onSuccess untuk menampilkan pesan di header
+        onSuccess("Password berhasil diubah");
+        
+        // Reset form
+        resetForm();
+        
+        // Tutup modal segera
+        handleClose();
       }
     } catch (error: any) {
       console.error("Error changing password:", error);
       if (error.response) {
         // Error dari server
         setError(
-          error.response.data.error ||
-            error.response.data.message ||
-            "Terjadi kesalahan saat mengubah password"
+          error.response.data.error || error.response.data.message || "Terjadi kesalahan saat mengubah password"
         );
       } else if (error.request) {
         // Request dibuat tapi tidak ada response
@@ -171,13 +170,6 @@ export default function ChangePasswordModal({
                   <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-lg flex items-start space-x-2">
                     <ExclamationCircleIcon className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
                     <span>{error}</span>
-                  </div>
-                )}
-
-                {success && (
-                  <div className="mb-6 p-4 bg-green-50 border border-green-100 text-green-600 text-sm rounded-lg flex items-start space-x-2">
-                    <CheckCircleIcon className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>{success}</span>
                   </div>
                 )}
 
