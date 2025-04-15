@@ -87,6 +87,9 @@ model Visit {
   id        Int      @id @default(autoincrement())
   subMenuId Int
   sessionId String
+  ipAddress String?  // Pastikan kolom ini ada
   timestamp DateTime
   sub_menu  sub_menu @relation(fields: [subMenuId], references: [id])
+
+  @@index([ipAddress, subMenuId, timestamp])
 }
