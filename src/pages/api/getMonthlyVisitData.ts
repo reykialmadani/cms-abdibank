@@ -1,4 +1,3 @@
-//src/pages/api/getMonthlyVisitData.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../lib/prisma";
 
@@ -10,7 +9,7 @@ interface VisitData {
   month: number;
   year: number;
   dailyVisits?: Record<string, number>;
-  uniqueVisitors?: number;
+  uniqueVisitors: number;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -20,11 +19,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const startDate = new Date(requestedYear, requestedMonth, 1);
     const endDate = new Date(requestedYear, requestedMonth + 1, 0, 23, 59, 59, 999);
-
+    
     // Group kunjungan berdasarkan subMenuId
     const visits = await prisma.visit.groupBy({
       by: ['subMenuId'],
-      _count: { id: true },
+      _count: {
+        id: true
+      },
       where: {
         timestamp: {
           gte: startDate,
@@ -32,37 +33,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       },
     });
-
+    
     // Hitung pengunjung unik (berdasarkan sessionId atau ipAddress)
     const uniqueVisitors = await Promise.all(
       visits.map(async (visit) => {
         const uniqueCount = await prisma.$queryRaw`
-          SELECT COUNT(DISTINCT CASE 
-            WHEN "sessionId" != '' THEN "sessionId" 
-            ELSE "ipAddress" 
-          END) as count
-          FROM "Visit"
-          WHERE "subMenuId" = ${visit.subMenuId}
-          AND "timestamp" >= ${startDate}
-          AND "timestamp" <= ${endDate}
-        `;
-        
+        SELECT COUNT(DISTINCT "ipAddress") as count
+        FROM "Visit"
+        WHERE "subMenuId" = ${visit.subMenuId}
+        AND "timestamp" >= ${startDate}
+        AND "timestamp" <= ${endDate}
+        AND "ipAddress" IS NOT NULL
+      `;
         return {
           subMenuId: visit.subMenuId,
           uniqueCount: Number(uniqueCount[0].count)
         };
       })
     );
-
+    
     const subMenus = await prisma.sub_menu.findMany({
       where: {
-        id: { in: visits.map(visit => visit.subMenuId) },
+        id: {
+          in: visits.map(visit => visit.subMenuId)
+        },
       },
       include: {
         menu: true,
       },
     });
-
+    
     let formattedData: VisitData[] = visits.map(visit => {
       const subMenu = subMenus.find(sm => sm.id === visit.subMenuId);
       const uniqueVisitorInfo = uniqueVisitors.find(uv => uv.subMenuId === visit.subMenuId);
@@ -77,11 +77,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         year: requestedYear,
       };
     });
-
+    
     if (req.query.daily === 'true') {
       const dailyVisits = await prisma.visit.groupBy({
         by: ['subMenuId', 'timestamp'],
-        _count: { id: true },
+        _count: {
+          id: true
+        },
         where: {
           timestamp: {
             gte: startDate,
@@ -92,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           timestamp: 'asc',
         },
       });
-
+      
       const dailyData: Record<number, Record<string, number>> = {};
       
       dailyVisits.forEach(visit => {
@@ -105,19 +107,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         dailyData[subMenuId][date] = (dailyData[subMenuId][date] || 0) + visit._count.id;
       });
-
+      
       formattedData = formattedData.map(item => ({
         ...item,
         dailyVisits: dailyData[item.subMenuId] || {},
       }));
     }
-
+    
     console.log("API Response:", {
       month: requestedMonth + 1,
       year: requestedYear,
       data: formattedData,
     });
-
+    
     res.status(200).json({
       month: requestedMonth + 1,
       year: requestedYear,

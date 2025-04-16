@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+   // ⛔️ Matikan Dev Tools UI
+   devIndicators: false,
+   
   // Headers untuk API routes
   async headers() {
     return [
