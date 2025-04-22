@@ -12,6 +12,69 @@ export default function Dashboard() {
     null
   );
 
+  // State untuk menghitung waktu tidak aktif
+  const [lastActivity, setLastActivity] = useState(Date.now());
+  const inactivityPeriod = 1 * 60 * 1000; // 1 menit dalam milidetik
+
+  // Fungsi untuk logout
+  const logout = () => {
+    console.log('Sesi berakhir karena tidak aktif, melakukan logout otomatis...');
+    localStorage.removeItem('token');
+    localStorage.removeItem('adminId');
+    localStorage.removeItem('adminUsername');
+    localStorage.removeItem('adminRole');
+    router.push('/');
+  };
+
+  // Fungsi untuk mereset timer saat ada aktivitas
+  const resetInactivityTimer = () => {
+    setLastActivity(Date.now());
+  };
+
+  // Fungsi untuk memeriksa waktu tidak aktif
+  const checkInactivity = () => {
+    const currentTime = Date.now();
+    const timeSinceLastActivity = currentTime - lastActivity;
+    
+    console.log(`Pengecekan inaktivitas: ${Math.round(timeSinceLastActivity/1000)} detik berlalu dari aktivitas terakhir`);
+
+    // Jika tidak ada aktivitas selama periode yang ditentukan, logout
+    if (timeSinceLastActivity > inactivityPeriod) {
+      console.log('Pengguna tidak aktif selama 1 menit, melakukan logout otomatis');
+      logout();
+    }
+  };
+
+  // useEffect untuk menangani auto-logout
+  useEffect(() => {
+    // Setup event listener untuk aktivitas pengguna
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    
+    // Tambahkan event listener untuk setiap jenis event
+    events.forEach(event => {
+      window.addEventListener(event, resetInactivityTimer);
+    });
+
+    // Inisialisasi waktu aktivitas terakhir
+    console.log('Inisialisasi timer aktivitas:', new Date().toISOString());
+    setLastActivity(Date.now());
+
+    // Setup interval untuk memeriksa inaktivitas setiap 10 detik
+    const inactivityCheckInterval = setInterval(checkInactivity, 10 * 1000); // Cek setiap 10 detik
+
+    // Cleanup saat komponen unmount
+    return () => {
+      // Hapus semua event listener
+      events.forEach(event => {
+        window.removeEventListener(event, resetInactivityTimer);
+      });
+      
+      // Clear interval
+      clearInterval(inactivityCheckInterval);
+    };
+  }, []); // Dependency array kosong agar hanya dijalankan sekali
+
+  // useEffect untuk fetch data admin
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {

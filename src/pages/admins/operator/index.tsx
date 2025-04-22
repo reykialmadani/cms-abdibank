@@ -5,15 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import AdminLayout from "../component/AdminLayout";
 import axios from "axios";
-import { 
-  TrashIcon, 
-  PlusIcon, 
-  MagnifyingGlassIcon, 
+import {
+  TrashIcon,
+  PlusIcon,
+  MagnifyingGlassIcon,
   ArrowUpIcon,
   ArrowDownIcon,
-  UserGroupIcon,  
+  UserGroupIcon,
   ExclamationTriangleIcon,
-  XMarkIcon
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 
 interface Operator {
@@ -57,12 +57,12 @@ export default function OperatorManagement() {
             Authorization: `Bearer ${token}`,
           },
         });
-        
+
         // Filter untuk hanya menampilkan operator (bukan admin)
         const onlyOperators = response.data.operators.filter(
           (op: Operator) => op.role !== "admin"
         );
-        
+
         setOperators(onlyOperators);
         setFilteredOperators(onlyOperators);
       } catch (error) {
@@ -79,30 +79,30 @@ export default function OperatorManagement() {
   // Filter dan sort
   useEffect(() => {
     // Filter berdasarkan search term
-    let result = operators.filter(operator => 
+    let result = operators.filter((operator) =>
       operator.username.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    
+
     // Sort data
     result = result.sort((a, b) => {
       const aValue = a[sortField as keyof Operator];
       const bValue = b[sortField as keyof Operator];
-      
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' 
-          ? aValue.localeCompare(bValue) 
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortDirection === "asc"
+          ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       } else {
         // Handle untuk numeric values
-        const numA = typeof aValue === 'number' ? aValue : Number(aValue);
-        const numB = typeof bValue === 'number' ? bValue : Number(bValue);
-        return sortDirection === 'asc' ? numA - numB : numB - numA;
+        const numA = typeof aValue === "number" ? aValue : Number(aValue);
+        const numB = typeof bValue === "number" ? bValue : Number(bValue);
+        return sortDirection === "asc" ? numA - numB : numB - numA;
       }
     });
-    
+
     setFilteredOperators(result);
   }, [operators, searchTerm, sortField, sortDirection]);
-  
+
   // Fungsi untuk menghapus operator
   const deleteOperator = async () => {
     if (!operatorToDelete) return;
@@ -128,17 +128,17 @@ export default function OperatorManagement() {
     setOperatorToDelete(id);
     setShowDeleteModal(true);
   };
-  
+
   // Fungsi untuk mengganti urutan sort
   const toggleSort = (field: string) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
-  
+
   // Format date function
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
@@ -153,15 +153,19 @@ export default function OperatorManagement() {
       <Head>
         <title>Manajemen Operator - Dashboard Admin</title>
       </Head>
-      
+
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-xl shadow-sm mb-4 sm:mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div className="mb-4 md:mb-0">
             <div className="flex items-center">
               <UserGroupIcon className="h-6 w-6 sm:h-8 sm:w-8 text-indigo-500 mr-2 sm:mr-3" />
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Manajemen Operator</h1>
-                <p className="text-sm sm:text-base text-gray-500">Kelola semua akun operator dalam sistem</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+                  Manajemen Operator
+                </h1>
+                <p className="text-sm sm:text-base text-gray-500">
+                  Kelola semua akun operator dalam sistem
+                </p>
               </div>
             </div>
           </div>
@@ -186,14 +190,14 @@ export default function OperatorManagement() {
           </div>
         </div>
       </div>
-      
+
       {error && (
         <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4 sm:mb-6 rounded-lg shadow-sm flex items-start">
           <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-3 mt-0.5" />
           <div className="flex-grow">
             <p className="text-sm text-red-700">{error}</p>
           </div>
-          <button 
+          <button
             onClick={() => setError("")}
             className="text-gray-400 hover:text-gray-600"
           >
@@ -201,7 +205,7 @@ export default function OperatorManagement() {
           </button>
         </div>
       )}
-      
+
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex justify-center items-center py-16 sm:py-20">
@@ -212,14 +216,18 @@ export default function OperatorManagement() {
             <div className="mx-auto h-16 w-16 sm:h-24 sm:w-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <UserGroupIcon className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-1">Tidak ada operator</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">
+              Tidak ada operator
+            </h3>
             {searchTerm ? (
               <p className="text-sm sm:text-base text-gray-500 max-w-md mx-auto">
-                Tidak ada operator yang cocok dengan pencarian {searchTerm}. Coba dengan kata kunci lain atau tambahkan operator baru.
+                Tidak ada operator yang cocok dengan pencarian {searchTerm}.
+                Coba dengan kata kunci lain atau tambahkan operator baru.
               </p>
             ) : (
               <p className="text-sm sm:text-base text-gray-500 max-w-md mx-auto">
-                Belum ada operator yang terdaftar di sistem. Tambahkan operator baru dengan mengklik tombol Tambah Operator.
+                Belum ada operator yang terdaftar di sistem. Tambahkan operator
+                baru dengan mengklik tombol Tambah Operator.
               </p>
             )}
             <div className="mt-6">
@@ -241,13 +249,15 @@ export default function OperatorManagement() {
                   <th
                     scope="col"
                     className="px-6 py-3 text-left"
-                    onClick={() => toggleSort('id')}
+                    onClick={() => toggleSort("id")}
                   >
                     <div className="flex items-center cursor-pointer group">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider group-hover:text-gray-700">ID</span>
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider group-hover:text-gray-700">
+                        ID
+                      </span>
                       <div className="ml-1">
-                        {sortField === 'id' ? (
-                          sortDirection === 'asc' ? (
+                        {sortField === "id" ? (
+                          sortDirection === "asc" ? (
                             <ArrowUpIcon className="h-4 w-4 text-indigo-500" />
                           ) : (
                             <ArrowDownIcon className="h-4 w-4 text-indigo-500" />
@@ -263,13 +273,15 @@ export default function OperatorManagement() {
                   <th
                     scope="col"
                     className="px-6 py-3 text-left"
-                    onClick={() => toggleSort('username')}
+                    onClick={() => toggleSort("username")}
                   >
                     <div className="flex items-center cursor-pointer group">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider group-hover:text-gray-700">Username</span>
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider group-hover:text-gray-700">
+                        Username
+                      </span>
                       <div className="ml-1">
-                        {sortField === 'username' ? (
-                          sortDirection === 'asc' ? (
+                        {sortField === "username" ? (
+                          sortDirection === "asc" ? (
                             <ArrowUpIcon className="h-4 w-4 text-indigo-500" />
                           ) : (
                             <ArrowDownIcon className="h-4 w-4 text-indigo-500" />
@@ -285,13 +297,15 @@ export default function OperatorManagement() {
                   <th
                     scope="col"
                     className="px-6 py-3 text-left"
-                    onClick={() => toggleSort('role')}
+                    onClick={() => toggleSort("role")}
                   >
                     <div className="flex items-center cursor-pointer group">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider group-hover:text-gray-700">Role</span>
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider group-hover:text-gray-700">
+                        Role
+                      </span>
                       <div className="ml-1">
-                        {sortField === 'role' ? (
-                          sortDirection === 'asc' ? (
+                        {sortField === "role" ? (
+                          sortDirection === "asc" ? (
                             <ArrowUpIcon className="h-4 w-4 text-indigo-500" />
                           ) : (
                             <ArrowDownIcon className="h-4 w-4 text-indigo-500" />
@@ -307,13 +321,15 @@ export default function OperatorManagement() {
                   <th
                     scope="col"
                     className="px-6 py-3 text-left"
-                    onClick={() => toggleSort('created_at')}
+                    onClick={() => toggleSort("created_at")}
                   >
                     <div className="flex items-center cursor-pointer group">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider group-hover:text-gray-700">Tanggal Dibuat</span>
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider group-hover:text-gray-700">
+                        Tanggal Dibuat
+                      </span>
                       <div className="ml-1">
-                        {sortField === 'created_at' ? (
-                          sortDirection === 'asc' ? (
+                        {sortField === "created_at" ? (
+                          sortDirection === "asc" ? (
                             <ArrowUpIcon className="h-4 w-4 text-indigo-500" />
                           ) : (
                             <ArrowDownIcon className="h-4 w-4 text-indigo-500" />
@@ -327,22 +343,31 @@ export default function OperatorManagement() {
                     </div>
                   </th>
                   <th scope="col" className="px-6 py-3 text-right">
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</span>
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Aksi
+                    </span>
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredOperators.map((operator) => (
-                  <tr key={operator.id} className="hover:bg-gray-50 transition-colors duration-150">
+                  <tr
+                    key={operator.id}
+                    className="hover:bg-gray-50 transition-colors duration-150"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{operator.id}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {operator.id}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 font-medium mr-3">
                           {operator.username.charAt(0).toUpperCase()}
                         </div>
-                        <div className="text-sm font-medium text-gray-900">{operator.username}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {operator.username}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -371,35 +396,50 @@ export default function OperatorManagement() {
             {/* Card layout untuk mobile */}
             <div className="sm:hidden divide-y divide-gray-200">
               {filteredOperators.map((operator) => (
-                <div key={operator.id} className="p-4 hover:bg-gray-50 transition-colors duration-150">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 font-medium mr-3">
-                        {operator.username.charAt(0).toUpperCase()}
+                <div
+                  key={operator.id}
+                  className="p-4 hover:bg-gray-50 transition-colors duration-150"
+                >
+                  <div className="flex items-start mb-2">
+                    {/* Logo/Avatar */}
+                    <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 font-medium mr-3">
+                      {operator.username.charAt(0).toUpperCase()}
+                    </div>
+
+                    {/* Main info container */}
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center">
+                        {/* Nama operator */}
+                        <div className="font-medium text-gray-900">
+                          {operator.username}
+                        </div>
+
+                        {/* ID */}
+                        <div className="text-sm text-gray-700">
+                          ID: <span className="font-medium">{operator.id}</span>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{operator.username}</div>
-                        <span className="px-2 py-0.5 text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+
+                      {/* Role */}
+                      <div className="mt-1">
+                        <span className="inline-block px-2 py-0.5 text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                           {operator.role}
                         </span>
                       </div>
+
+                      {/* Tanggal dibuat */}
+                      <div className="mt-1 text-xs text-gray-500">
+                        Tanggal Dibuat: {formatDate(operator.created_at)}
+                      </div>
                     </div>
+
+                    {/* Delete button */}
                     <button
                       onClick={() => confirmDelete(operator.id)}
-                      className="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded-lg hover:bg-red-100 transition-colors duration-150"
+                      className="ml-2 text-red-600 hover:text-red-900 bg-red-50 p-2 rounded-lg hover:bg-red-100 transition-colors duration-150"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
-                  </div>
-                  <div className="pl-13 ml-13 grid grid-cols-2 gap-2 text-sm text-gray-500">
-                    <div>
-                      <span className="block text-xs text-gray-500 uppercase">ID</span>
-                      <span>{operator.id}</span>
-                    </div>
-                    <div>
-                      <span className="block text-xs text-gray-500 uppercase">Tanggal Dibuat</span>
-                      <span>{formatDate(operator.created_at)}</span>
-                    </div>
                   </div>
                 </div>
               ))}
@@ -413,26 +453,33 @@ export default function OperatorManagement() {
         <div className="fixed z-50 inset-0 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             {/* Background overlay */}
-            <div 
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
               onClick={() => setShowDeleteModal(false)}
               aria-hidden="true"
             ></div>
-            
+
             {/* Modal */}
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full w-full max-w-md mx-auto">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <ExclamationTriangleIcon className="h-6 w-6 text-red-600" aria-hidden="true" />
+                    <ExclamationTriangleIcon
+                      className="h-6 w-6 text-red-600"
+                      aria-hidden="true"
+                    />
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                    <h3
+                      className="text-lg leading-6 font-medium text-gray-900"
+                      id="modal-title"
+                    >
                       Hapus Operator
                     </h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
-                        Apakah Anda yakin ingin menghapus operator ini? Tindakan ini tidak dapat dibatalkan.
+                        Apakah Anda yakin ingin menghapus operator ini? Tindakan
+                        ini tidak dapat dibatalkan.
                       </p>
                     </div>
                   </div>

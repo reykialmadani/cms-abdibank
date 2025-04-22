@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
 
-   // ⛔️ Matikan Dev Tools UI
+   //Dev Tools UI
    devIndicators: false,
    
   // Headers untuk API routes

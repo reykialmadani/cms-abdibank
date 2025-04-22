@@ -69,7 +69,6 @@ export default function ChangePasswordModal({
         return;
       }
 
-      // Pertama verifikasi password saat ini menggunakan endpoint verifikasi
       const verifyResult = await axios.post(
         "/api/admin/verify-password",
         { adminId, password: currentPassword },
