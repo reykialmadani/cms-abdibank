@@ -14,7 +14,7 @@ import { ContentItem, Pagination, ContentToDelete } from "@/types/read";
 export default function ContentList() {
   // State untuk content items
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
-
+  
   // State untuk pagination
   const [pagination, setPagination] = useState<Pagination>({
     current_page: 1,
@@ -22,22 +22,22 @@ export default function ContentList() {
     per_page: 10,
     total: 0,
   });
-
+  
   // State untuk loading, error, filtering dan search
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
-  const [search,] = useState<string>("");
+  const [search] = useState<string>("");
   const [, setRefreshing] = useState<boolean>(false);
-
+  
   // State untuk delete functionality
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const [contentToDelete, setContentToDelete] = useState<ContentToDelete | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
   const [deleteError, setDeleteError] = useState<string>("");
   const [deleteSuccess, setDeleteSuccess] = useState<string>("");
-
+  
   const router = useRouter();
-
+  
   // Fetch content items dari API dengan pagination dan search
   const fetchContentItems = useCallback(async (page = 1, searchQuery = search) => {
     try {
@@ -49,7 +49,7 @@ export default function ContentList() {
         router.push("/");
         return;
       }
-
+      
       const response = await axios.get("/api/content", {
         headers: {
           Authorization: `Bearer ${token}`
@@ -60,7 +60,7 @@ export default function ContentList() {
           per_page: pagination.per_page,
         },
       });
-
+      
       setContentItems(response.data.data);
       setPagination({
         current_page: response.data.current_page,
@@ -76,30 +76,35 @@ export default function ContentList() {
       setRefreshing(false);
     }
   }, [pagination.per_page, router, search]);
-
+  
   // Initial fetch saat komponen di-mount
   useEffect(() => {
     fetchContentItems();
   }, [fetchContentItems]);
-
+  
+  // Fungsi untuk handle search
+  // const handleSearch = (query: string) => {
+  //   setSearch(query);
+  //   fetchContentItems(1, query);
+  // };
+  
   // Fungsi untuk membuka modal delete
   const handleOpenDeleteModal = (id: number, title: string) => {
     setContentToDelete({ id, title });
     setDeleteModalOpen(true);
     setDeleteError("");
   };
-
+  
   // Fungsi untuk menutup modal delete
   const handleCloseDeleteModal = () => {
     setDeleteModalOpen(false);
     setDeleteError("");
-    
     // Beri waktu agar animasi modal selesai sebelum mereset state
     setTimeout(() => {
       setContentToDelete(null);
     }, 200);
   };
-
+  
   // Fungsi untuk konfirmasi penghapusan
   const handleConfirmDelete = async () => {
     if (!contentToDelete) return;
@@ -128,14 +133,14 @@ export default function ContentList() {
     } catch (err) {
       console.error("Error deleting content:", err);
       if (err instanceof Error) {
-        setDeleteError(err.message);  
+        setDeleteError(err.message);
       } else {
         setDeleteError("Terjadi kesalahan saat menghapus content");
       }
       setDeleteLoading(false);
     }
   };
-
+  
   return (
     <AdminLayout>
       <Head>
@@ -150,7 +155,6 @@ export default function ContentList() {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
-            
             {/* Pesan error */}
             {error && <AlertMessage type="error" message={error} />}
             
@@ -158,12 +162,16 @@ export default function ContentList() {
             {deleteSuccess && <AlertMessage type="success" message={deleteSuccess} />}
             
             {/* Tabel content */}
-            <ReadTable
-              contentItems={contentItems}
-              loading={loading}
-              search={search}
-              onDelete={handleOpenDeleteModal}
-            />
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <ReadTable 
+                contentItems={contentItems} 
+                loading={loading} 
+                search={search} 
+                onDelete={handleOpenDeleteModal}
+                pagination={pagination}
+                onPageChange={(page) => fetchContentItems(page)}
+              />
+            </div>
           </div>
         </div>
       </div>
