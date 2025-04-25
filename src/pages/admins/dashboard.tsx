@@ -14,7 +14,7 @@ export default function Dashboard() {
 
   // State untuk menghitung waktu tidak aktif
   const [lastActivity, setLastActivity] = useState(Date.now());
-  const inactivityPeriod = 1 * 60 * 1000; // 1 menit dalam milidetik
+  const inactivityPeriod = 45 * 60 * 1000; // 1 menit dalam milidetik
 
   // Fungsi untuk logout
   const logout = () => {
