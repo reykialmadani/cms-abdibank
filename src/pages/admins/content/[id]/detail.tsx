@@ -111,7 +111,6 @@ const ContentDetail: FC = () => {
       }
       return [];
     } catch (e) {
-      console.error("Error parsing required_documents:", e);
       // If not JSON, use split
       return content.required_documents
         .split("\n")

@@ -1,272 +1,249 @@
 // /api/report/[id].ts
+
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
-import { verifyToken } from '@/utils/auth';
 
 const prisma = new PrismaClient();
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Verifikasi token
-    const token = req.headers.authorization?.split(' ')[1] || '';
-    const decodedToken = verifyToken(token);
-    
-    if (!decodedToken) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Tidak diizinkan, silakan login terlebih dahulu' 
-      });
-    }
-    
-    // Mendapatkan admin berdasarkan userId dari token
-    const admin = await prisma.admin.findUnique({
-      where: {
-        id: decodedToken.userId
-      }
-    });
-    
-    if (!admin) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Admin tidak ditemukan' 
-      });
-    }
-
-    // Dapatkan ID dari URL
     const { id } = req.query;
-    
+
     if (!id || Array.isArray(id)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'ID laporan tidak valid' 
-      });
+      return res.status(400).json({ success: false, message: 'ID laporan tidak valid' });
     }
 
-    const reportId = parseInt(id, 10);
+    if (id === 'filter') {
+      return handleFilteredReports(req, res);
+    }
 
-    // Tangani metode HTTP yang berbeda
+    const idStr = id.toString();
+
+    if (idStr.startsWith('report=')) {
+      const reportType = idStr.split('report=')[1];
+      return handleReportTypeFilter(reportType, req, res);
+    }
+
+    const reportId = parseInt(idStr, 10);
+    if (isNaN(reportId)) {
+      return res.status(400).json({ success: false, message: 'ID laporan harus berupa angka' });
+    }
+
     switch (req.method) {
       case 'GET':
         return handleGet(reportId, res);
       case 'PUT':
-        return handlePut(reportId, req, res, admin.id);
       case 'DELETE':
-        return handleDelete(reportId, res, admin.id);
+        return res.status(403).json({ success: false, message: `Metode ${req.method} tidak diizinkan pada endpoint publik` });
       default:
-        return res.status(405).json({ 
-          success: false, 
-          message: 'Metode tidak diizinkan' 
-        });
+        return res.status(405).json({ success: false, message: 'Metode tidak diizinkan' });
     }
   } catch (error) {
     console.error('Error in /api/report/[id]:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Terjadi kesalahan pada server' 
-    });
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan pada server' });
   }
 }
 
-// Fungsi untuk menangani permintaan GET berdasarkan ID
+// Utility: menentukan kategori laporan
+function getKategori(report: any): string {
+  if (report.report_type === 'tata-kelola') return 'Tata Kelola';
+  if (report.report_type === 'publikasi') return 'Publikasi';
+  if (report.report_type && report.report_year) return 'Laporan Bulanan';
+  if (report.report_year && !report.report_type) return 'Laporan Tahunan';
+  return '';
+}
+
+// Handler: GET berdasarkan ID
 async function handleGet(id: number, res: NextApiResponse) {
   try {
-    // Cari laporan berdasarkan ID
     const report = await prisma.content.findUnique({
-      where: {
-        id,
-        deleted_at: null
-      },
+      where: { id, deleted_at: null },
       include: {
-        admin: {
-          select: {
-            username: true
-          }
-        },
+        admin: { select: { username: true } },
         sub_menu: {
           select: {
             sub_menu_name: true,
             menu_id: true,
-            menu: {
-              select: {
-                menu_name: true
-              }
-            }
+            menu: { select: { menu_name: true } }
           }
         }
       }
     });
 
-    if (!report) {
-      return res.status(404).json({
-        success: false,
-        message: 'Laporan tidak ditemukan'
-      });
+    if (!report || (!report.report_type && !report.report_year)) {
+      return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan atau bukan laporan' });
     }
 
-    // Pastikan ini adalah laporan (memiliki report_type atau report_year)
-    if (!report.report_type && !report.report_year) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data bukan merupakan laporan'
-      });
-    }
-
-    // Format respons
     const { admin, sub_menu, ...reportData } = report;
-    
-    const formattedReport = {
-      ...reportData,
-      month: report.report_type ? parseInt(report.report_type) : null,
-      year: report.report_year,
-      updater: admin?.username || null,
-      sub_menu_name: sub_menu?.sub_menu_name || null,
-      menu_name: sub_menu?.menu?.menu_name || null,
-      menu_id: sub_menu?.menu_id || null
-    };
 
     return res.status(200).json({
       success: true,
-      data: formattedReport
+      data: {
+        ...reportData,
+        kategori: getKategori(report),
+        month: !['tata-kelola', 'publikasi'].includes(report.report_type || '') ? parseInt(report.report_type!) : null,
+        year: report.report_year,
+        updater: admin?.username || null,
+        sub_menu_name: sub_menu?.sub_menu_name || null,
+        menu_name: sub_menu?.menu?.menu_name || null,
+      }
     });
   } catch (error) {
-    console.error('Error fetching report:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Terjadi kesalahan saat mengambil data laporan'
-    });
+    console.error('Error fetching report by ID:', error);
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan saat mengambil data laporan' });
   }
 }
 
-// Fungsi untuk menangani permintaan PUT (update)
-async function handlePut(
-  id: number,
-  req: NextApiRequest,
-  res: NextApiResponse,
-  adminId: number
-) {
+// Handler: laporan berdasarkan tipe
+async function handleReportTypeFilter(reportType: string, req: NextApiRequest, res: NextApiResponse) {
+  const { page = '1', limit = '10', search = '', status = '' } = req.query;
+
+  const pageNumber = parseInt(page as string, 10);
+  const limitNumber = parseInt(limit as string, 10);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const where: any = { deleted_at: null };
+
+  if (search) {
+    where.title = { contains: search as string, mode: 'insensitive' };
+  }
+  if (status === 'active') where.status = true;
+  if (status === 'inactive') where.status = false;
+
+  switch (reportType.toLowerCase()) {
+    case 'tahunan':
+      where.report_year = { not: null };
+      where.report_type = null;
+      break;
+    case 'bulanan':
+      where.report_year = { not: null };
+      where.report_type = { notIn: ['tata-kelola', 'publikasi'] };
+      break;
+    case 'tata-kelola':
+      where.report_type = 'tata-kelola';
+      break;
+    case 'publikasi':
+      where.report_type = 'publikasi';
+      break;
+    default:
+      return res.status(400).json({ success: false, message: 'Tipe laporan tidak valid. Gunakan: tahunan, bulanan, tata-kelola, atau publikasi' });
+  }
+
   try {
-    // Periksa apakah laporan ada
-    const existingReport = await prisma.content.findUnique({
-      where: {
-        id,
-        deleted_at: null
-      }
+    const totalCount = await prisma.content.count({ where });
+
+    const reports = await prisma.content.findMany({
+      where,
+      include: {
+        admin: { select: { username: true } },
+        sub_menu: { select: { sub_menu_name: true } }
+      },
+      orderBy: { updated_at: 'desc' },
+      skip,
+      take: limitNumber
     });
 
-    if (!existingReport) {
-      return res.status(404).json({
-        success: false,
-        message: 'Laporan tidak ditemukan'
-      });
-    }
-
-    // Pastikan ini adalah laporan (memiliki report_type atau report_year)
-    if (!existingReport.report_type && !existingReport.report_year) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data bukan merupakan laporan'
-      });
-    }
-
-    const { 
-      sub_menu_id, 
-      title, 
-      month, 
-      year, 
-      required_documents, 
-      status, 
-      updated_by = adminId 
-    } = req.body;
-
-    // Validasi input
-    if (!sub_menu_id || !title || !month || !year) {
-      return res.status(400).json({
-        success: false,
-        message: 'Data tidak lengkap. Harap isi semua field yang diperlukan'
-      });
-    }
-
-    // Update laporan
-    const updatedReport = await prisma.content.update({
-      where: { id },
-      data: {
-        sub_menu_id: parseInt(sub_menu_id.toString()),
-        title,
-        required_documents,
-        status: status === 1 || status === true,
-        report_type: `${month}`, // Menggunakan kolom report_type untuk bulan
-        report_year: year,
-        updated_by: parseInt(updated_by.toString()),
-        updated_at: new Date()
-      }
-    });
+    const formattedReports = reports.map(report => ({
+      ...report,
+      kategori: getKategori(report),
+      updater: report.admin?.username || null,
+      sub_menu_name: report.sub_menu?.sub_menu_name || null
+    }));
 
     return res.status(200).json({
       success: true,
-      message: 'Laporan berhasil diperbarui',
-      data: updatedReport
+      reportType,
+      data: formattedReports,
+      pagination: {
+        total: totalCount,
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(totalCount / limitNumber)
+      }
     });
   } catch (error) {
-    console.error('Error updating report:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Terjadi kesalahan saat memperbarui laporan'
-    });
+    console.error(`Error fetching ${reportType} reports:`, error);
+    return res.status(500).json({ success: false, message: `Terjadi kesalahan saat mengambil data laporan ${reportType}` });
   }
 }
 
-// Fungsi untuk menangani permintaan DELETE
-async function handleDelete(
-  id: number,
-  res: NextApiResponse,
-  adminId: number
-) {
+// Handler: filter dinamis berdasarkan query
+async function handleFilteredReports(req: NextApiRequest, res: NextApiResponse) {
+  const { type, year, month, page = '1', limit = '10', search = '', status = '' } = req.query;
+
+  const pageNumber = parseInt(page as string, 10);
+  const limitNumber = parseInt(limit as string, 10);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const where: any = { deleted_at: null };
+
+  if (search) {
+    where.title = { contains: search as string, mode: 'insensitive' };
+  }
+  if (status === 'active') where.status = true;
+  if (status === 'inactive') where.status = false;
+
+  if (type) {
+    switch (type.toString().toLowerCase()) {
+      case 'tahunan':
+        where.report_year = { not: null };
+        where.report_type = null;
+        break;
+      case 'bulanan':
+        where.report_year = { not: null };
+        where.report_type = { notIn: ['tata-kelola', 'publikasi'] };
+        break;
+      case 'tata-kelola':
+        where.report_type = 'tata-kelola';
+        break;
+      case 'publikasi':
+        where.report_type = 'publikasi';
+        break;
+    }
+  }
+
+  if (year) {
+    where.report_year = year.toString();
+  }
+
+  if (month && !['tata-kelola', 'publikasi'].includes(month.toString().toLowerCase())) {
+    where.report_type = month.toString();
+  }
+
   try {
-    // Periksa apakah laporan ada
-    const existingReport = await prisma.content.findUnique({
-      where: {
-        id,
-        deleted_at: null
-      }
+    const totalCount = await prisma.content.count({ where });
+
+    const reports = await prisma.content.findMany({
+      where,
+      include: {
+        admin: { select: { username: true } },
+        sub_menu: { select: { sub_menu_name: true } }
+      },
+      orderBy: { updated_at: 'desc' },
+      skip,
+      take: limitNumber
     });
 
-    if (!existingReport) {
-      return res.status(404).json({
-        success: false,
-        message: 'Laporan tidak ditemukan'
-      });
-    }
-
-    // Pastikan ini adalah laporan (memiliki report_type atau report_year)
-    if (!existingReport.report_type && !existingReport.report_year) {
-      return res.status(404).json({
-        success: false,
-        message: 'Data bukan merupakan laporan'
-      });
-    }
-
-    // Soft delete laporan
-    const deletedReport = await prisma.content.update({
-      where: { id },
-      data: {
-        deleted_at: new Date(),
-        updated_by: adminId
-      }
-    });
+    const formattedReports = reports.map(report => ({
+      ...report,
+      kategori: getKategori(report),
+      updater: report.admin?.username || null,
+      sub_menu_name: report.sub_menu?.sub_menu_name || null
+    }));
 
     return res.status(200).json({
       success: true,
-      message: 'Laporan berhasil dihapus',
-      data: deletedReport
+      filters: { type, year, month },
+      data: formattedReports,
+      pagination: {
+        total: totalCount,
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(totalCount / limitNumber)
+      }
     });
   } catch (error) {
-    console.error('Error deleting report:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Terjadi kesalahan saat menghapus laporan'
-    });
+    console.error('Error fetching filtered reports:', error);
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan saat mengambil data laporan terfilter' });
   }
 }

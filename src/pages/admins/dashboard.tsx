@@ -70,33 +70,33 @@ export default function Dashboard() {
   }, [router]);
 
   // useEffect untuk menangani auto-logout
-  useEffect(() => {
-    // Setup event listener untuk aktivitas pengguna
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+  // useEffect(() => {
+  //   // Setup event listener untuk aktivitas pengguna
+  //   const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     
-    // Tambahkan event listener untuk setiap jenis event
-    events.forEach(event => {
-      window.addEventListener(event, resetInactivityTimer);
-    });
+  //   // Tambahkan event listener untuk setiap jenis event
+  //   events.forEach(event => {
+  //     window.addEventListener(event, resetInactivityTimer);
+  //   });
     
-    // Inisialisasi waktu aktivitas terakhir
-    console.log('Inisialisasi timer aktivitas:', new Date().toISOString());
-    setLastActivity(Date.now());
+  //   // Inisialisasi waktu aktivitas terakhir
+  //   // console.log('Inisialisasi timer aktivitas:', new Date().toISOString());
+  //   setLastActivity(Date.now());
     
-    // Setup interval untuk memeriksa inaktivitas
-    const inactivityCheckInterval = setInterval(checkInactivity, INACTIVITY_CHECK_INTERVAL);
+  //   // Setup interval untuk memeriksa inaktivitas
+  //   const inactivityCheckInterval = setInterval(checkInactivity, INACTIVITY_CHECK_INTERVAL);
     
-    // Cleanup saat komponen unmount
-    return () => {
-      // Hapus semua event listener
-      events.forEach(event => {
-        window.removeEventListener(event, resetInactivityTimer);
-      });
+  //   // Cleanup saat komponen unmount
+  //   return () => {
+  //     // Hapus semua event listener
+  //     events.forEach(event => {
+  //       window.removeEventListener(event, resetInactivityTimer);
+  //     });
       
-      // Clear interval
-      clearInterval(inactivityCheckInterval);
-    };
-  }, [resetInactivityTimer, checkInactivity, INACTIVITY_CHECK_INTERVAL]);
+  //     // Clear interval
+  //     clearInterval(inactivityCheckInterval);
+  //   };
+  // }, [resetInactivityTimer, checkInactivity, INACTIVITY_CHECK_INTERVAL]);
 
   // useEffect untuk fetch data admin dan pengecekan autentikasi
   useEffect(() => {
