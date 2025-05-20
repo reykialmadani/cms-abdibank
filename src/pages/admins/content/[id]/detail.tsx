@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, FC } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import axios from "axios";
-// import Image from "next/image";
+import axios, { AxiosError } from "axios";
+import "react-quill-new/dist/quill.snow.css"; // Import React Quill styles
 import AdminLayout from "@/pages/admins/component/AdminLayout";
 import AlertMessage from "@/pages/admins/component/create/AlertMessage";
-import "react-quill-new/dist/quill.snow.css"; // Import React Quill styles
 
+// Proper TypeScript interfaces with specific types
 interface Menu {
   id: number;
   menu_name: string;
@@ -15,7 +15,7 @@ interface Menu {
   url: string;
   created_at: string;
   updated_at: string;
-  updated_by: any;
+  updated_by: string | null;
 }
 
 interface SubMenu {
@@ -27,57 +27,58 @@ interface SubMenu {
   status: boolean;
   created_at: string;
   updated_at: string;
-  updated_by: any;
+  updated_by: string | null;
   menu: Menu;
 }
 
-interface ContentDetail {
+interface ContentDetailType {
   id: number;
   sub_menu_id: number;
   title: string;
-  description: string;
+  description?: string; // Make description optional
   required_documents?: string;
+  month?: number; // Add month for reports
+  year?: string; // Add year for reports
   thumbnail?: string;
   status: boolean;
   report_type?: string;
   report_year?: string;
   created_at: string;
   updated_at: string;
-  updated_by?: any;
-  deleted_at?: any;
+  updated_by?: string | null;
+  deleted_at?: string | null;
   sub_menu: SubMenu;
 }
 
-export default function ContentDetail() {
-  // State untuk data content
-  const [content, setContent] = useState<ContentDetail | null>(null);
+const ContentDetail: FC = () => {
+  // State management with proper typing
+  const [content, setContent] = useState<ContentDetailType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
-
   const router = useRouter();
   const { id } = router.query;
 
-  // Fetch data content berdasarkan ID
+  // Fetch content data based on ID
   useEffect(() => {
-    const fetchContent = async () => {
+    const fetchContent = async (): Promise<void> => {
       if (!id) return;
-
       try {
         setLoading(true);
         const token = localStorage.getItem("token");
-
         if (!token) {
           router.push("/");
           return;
         }
-
-        const response = await axios.get(`/api/content/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
+        const response = await axios.get<{ data: ContentDetailType }>(
+          `/api/content/${id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setContent(response.data.data);
       } catch (err) {
-        console.error("Error fetching content detail:", err);
+        const axiosError = err as AxiosError;
+        console.error("Error fetching content detail:", axiosError);
         setError("Gagal memuat data content. Silakan coba lagi nanti.");
       } finally {
         setLoading(false);
@@ -87,17 +88,8 @@ export default function ContentDetail() {
     fetchContent();
   }, [id, router]);
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  const formatDate = (dateString: string) => {
+  // Format date helper function
+  const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat("id-ID", {
       day: "2-digit",
@@ -108,63 +100,102 @@ export default function ContentDetail() {
     }).format(date);
   };
 
-  const getRequiredDocuments = () => {
+  // Parse required documents
+  const getRequiredDocuments = (): string[] => {
     if (!content?.required_documents) return [];
-
     try {
-      // Jika required_documents adalah JSON string, parse terlebih dahulu
+      // If required_documents is a JSON string, parse it first
       const parsedDocs = JSON.parse(content.required_documents);
       if (Array.isArray(parsedDocs)) {
-        return parsedDocs.filter((doc) => doc.trim() !== "");
+        return parsedDocs.filter((doc: string) => doc.trim() !== "");
       }
       return [];
     } catch (e) {
-      // Jika bukan JSON, gunakan split
+      console.error("Error parsing required_documents:", e);
+      // If not JSON, use split
       return content.required_documents
         .split("\n")
-        .filter((doc) => doc.trim() !== "");
+        .filter((doc: string) => doc.trim() !== "");
     }
   };
 
-  // Function to check if the content needs to be parsed from markdown
-  const renderDescription = () => {
+  // Get month name from month number
+  const getMonthName = (monthNum: number): string => {
+    const months = [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember",
+    ];
+    return months[monthNum - 1] || "";
+  };
+
+  // Safely render HTML content
+  const renderDescription = (): React.ReactNode => {
     if (!content) return null;
 
-    // Create a div element to safely parse the HTML content
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = content.description;
-
-    // Check if content has proper HTML structure or if it's escaped
-    if (
-      tempDiv.querySelector("ol, ul, strong, em, u, p") ||
-      content.description.includes("<ol") ||
-      content.description.includes("<ul") ||
-      content.description.includes("<strong")
-    ) {
-      return (
-        <div
-          className="ql-editor" // Use the actual React Quill editor class
-          dangerouslySetInnerHTML={{ __html: content.description }}
-        />
-      );
-    } else {
-      // Handle plain text or markdown
-      return (
-        <div>
-          {content.description.split("\n").map((paragraph, idx) => (
-            <p key={idx}>{paragraph}</p>
-          ))}
-        </div>
-      );
+    // If description doesn't exist (for reports created from create-report.tsx)
+    if (!content.description) {
+      return <p className="text-gray-500 italic">Tidak ada deskripsi</p>;
     }
+
+    // Client-side only rendering for HTML content
+    if (typeof window !== "undefined") {
+      // Create a div element to safely parse the HTML content
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = content.description;
+
+      // Check if content has proper HTML structure or if it's escaped
+      if (
+        tempDiv.querySelector("ol, ul, strong, em, u, p") ||
+        content.description.includes("<ol") ||
+        content.description.includes("<ul") ||
+        content.description.includes("<strong")
+      ) {
+        return (
+          <div
+            className="ql-editor"
+            dangerouslySetInnerHTML={{ __html: content.description }}
+          />
+        );
+      }
+    }
+
+    // Handle plain text or markdown, or server-side rendering
+    return (
+      <div>
+        {content.description.split("\n").map((paragraph, idx) => (
+          <p key={idx}>{paragraph}</p>
+        ))}
+      </div>
+    );
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // Main component render
   return (
     <AdminLayout>
       <Head>
         <title>Detail Content - Admin Dashboard</title>
       </Head>
-
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="flex justify-between items-center">
@@ -181,11 +212,9 @@ export default function ContentDetail() {
             </div>
           </div>
         </div>
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
             {error && <AlertMessage type="error" message={error} />}
-
             {content && (
               <div className="bg-white shadow overflow-hidden sm:rounded-lg">
                 {/* Status Badge */}
@@ -203,7 +232,6 @@ export default function ContentDetail() {
                     {content.status ? "Aktif" : "Tidak Aktif"}
                   </span>
                 </div>
-
                 {/* Content Details */}
                 <div className="border-t border-gray-200">
                   <dl>
@@ -235,16 +263,57 @@ export default function ContentDetail() {
                       </dd>
                     </div>
 
-                    {/* Report Type & Year (if applicable) */}
-                    {content.report_type && (
+                    {/* Report Month & Year (for reports created from create-report.tsx) */}
+                    {content.month && (
                       <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                        <dt className="text-sm font-medium text-gray-500">
+                          Bulan
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                          {getMonthName(content.month)}
+                        </dd>
+                      </div>
+                    )}
+
+                    {content.year && (
+                      <div
+                        className={`${
+                          content.month ? "bg-gray-50" : "bg-white"
+                        } px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6`}
+                      >
+                        <dt className="text-sm font-medium text-gray-500">
+                          Tahun
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                          {content.year}
+                        </dd>
+                      </div>
+                    )}
+
+                    {/* Report Type & Year (if applicable - from the original content) */}
+                    {content.report_type && (
+                      <div
+                        className={`${
+                          content.month || content.year
+                            ? "bg-white"
+                            : "bg-gray-50"
+                        } px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6`}
+                      >
                         <dt className="text-sm font-medium text-gray-500">
                           Jenis Laporan
                         </dt>
                         <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                          {content.report_type === "triwulan"
-                            ? "Laporan Triwulan"
-                            : "Laporan Tahunan"}
+                          {
+                            content.report_type === "bulanan"
+                              ? "Laporan Bulanan"
+                              : content.report_type === "tahunan"
+                              ? "Laporan Tahunan"
+                              : content.report_type === "tata_kelola"
+                              ? "Laporan Tata Kelola"
+                              : content.report_type === "publikasi"
+                              ? "Publikasi"
+                              : content.report_type /* Tampilkan nilai aslinya jika ada jenis lain */
+                          }
                         </dd>
                       </div>
                     )}
@@ -263,7 +332,9 @@ export default function ContentDetail() {
                     {/* Description with proper styling for React Quill content */}
                     <div
                       className={`${
-                        content.report_type ? "bg-white" : "bg-gray-50"
+                        content.report_type || content.month || content.year
+                          ? "bg-white"
+                          : "bg-gray-50"
                       } px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6`}
                     >
                       <dt className="text-sm font-medium text-gray-500">
@@ -278,7 +349,9 @@ export default function ContentDetail() {
                     {getRequiredDocuments().length > 0 && (
                       <div
                         className={`${
-                          content.report_type ? "bg-gray-50" : "bg-white"
+                          content.report_type || content.month || content.year
+                            ? "bg-gray-50"
+                            : "bg-white"
                         } px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6`}
                       >
                         <dt className="text-sm font-medium text-gray-500">
@@ -297,6 +370,7 @@ export default function ContentDetail() {
                                     xmlns="http://www.w3.org/2000/svg"
                                     viewBox="0 0 20 20"
                                     fill="currentColor"
+                                    aria-hidden="true"
                                   >
                                     <path
                                       fillRule="evenodd"
@@ -328,7 +402,6 @@ export default function ContentDetail() {
                         {formatDate(content.created_at)}
                       </dd>
                     </div>
-
                     <div
                       className={`${
                         content.thumbnail ? "bg-white" : "bg-gray-50"
@@ -350,4 +423,6 @@ export default function ContentDetail() {
       </div>
     </AdminLayout>
   );
-}
+};
+
+export default ContentDetail;

@@ -226,7 +226,7 @@ export default function CreateReport() {
         jsonData.updated_by = parseInt(userId);
       }
 
-      await axios.post("/api/report", jsonData, {
+      await axios.post("/api/report/report", jsonData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json", // Changed to JSON
