@@ -1,107 +1,61 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import AdminLayout from "../admins/component/AdminLayout";
-import SimpleLineChart from "./component/dashboard/SimpleLineChart"; 
+import SimpleLineChart from "./component/dashboard/SimpleLineChart";
 import ChartTop from "./component/dashboard/ChartTop";
+
+interface AdminUser {
+  username: string;
+  id: number;
+}
 
 export default function Dashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [admin, setAdmin] = useState<{ username: string; id: number } | null>(
-    null
-  );
-
-  // State untuk menghitung waktu tidak aktif
+  const [admin, setAdmin] = useState<AdminUser | null>(null);
+  
+  // Konstanta untuk konfigurasi auto-logout
+  const INACTIVITY_PERIOD = 45 * 60 * 1000; // 45 menit dalam milidetik
+  const INACTIVITY_CHECK_INTERVAL = 10 * 1000; // 10 detik
   const [lastActivity, setLastActivity] = useState(Date.now());
-  const inactivityPeriod = 45 * 60 * 1000; // 1 menit dalam milidetik
 
   // Fungsi untuk logout
-  const logout = () => {
+  const logout = useCallback(() => {
     console.log('Sesi berakhir karena tidak aktif, melakukan logout otomatis...');
     localStorage.removeItem('token');
     localStorage.removeItem('adminId');
     localStorage.removeItem('adminUsername');
     localStorage.removeItem('adminRole');
     router.push('/');
-  };
-
-  // Fungsi untuk mereset timer saat ada aktivitas
-  const resetInactivityTimer = () => {
-    setLastActivity(Date.now());
-  };
-
-  // Fungsi untuk memeriksa waktu tidak aktif
-  const checkInactivity = () => {
-    const currentTime = Date.now();
-    const timeSinceLastActivity = currentTime - lastActivity;
-    
-    console.log(`Pengecekan inaktivitas: ${Math.round(timeSinceLastActivity/1000)} detik berlalu dari aktivitas terakhir`);
-
-    // Jika tidak ada aktivitas selama periode yang ditentukan, logout
-    if (timeSinceLastActivity > inactivityPeriod) {
-      console.log('Pengguna tidak aktif selama 1 menit, melakukan logout otomatis');
-      logout();
-    }
-  };
-
-  // useEffect untuk menangani auto-logout
-  useEffect(() => {
-    // Setup event listener untuk aktivitas pengguna
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
-    // Tambahkan event listener untuk setiap jenis event
-    events.forEach(event => {
-      window.addEventListener(event, resetInactivityTimer);
-    });
-
-    // Inisialisasi waktu aktivitas terakhir
-    console.log('Inisialisasi timer aktivitas:', new Date().toISOString());
-    setLastActivity(Date.now());
-
-    // Setup interval untuk memeriksa inaktivitas setiap 10 detik
-    const inactivityCheckInterval = setInterval(checkInactivity, 10 * 1000); // Cek setiap 10 detik
-
-    // Cleanup saat komponen unmount
-    return () => {
-      // Hapus semua event listener
-      events.forEach(event => {
-        window.removeEventListener(event, resetInactivityTimer);
-      });
-      
-      // Clear interval
-      clearInterval(inactivityCheckInterval);
-    };
-  }, []); // Dependency array kosong agar hanya dijalankan sekali
-
-  // useEffect untuk fetch data admin
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/");
-      return;
-    }
-    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-    const adminId = localStorage.getItem("adminId");
-    const adminUsername = localStorage.getItem("adminUsername");
-    if (adminId && adminUsername) {
-      setAdmin({
-        id: Number(adminId),
-        username: adminUsername,
-      });
-      setLoading(false);
-    } else {
-      fetchAdminData();
-    }
   }, [router]);
 
-  const fetchAdminData = async () => {
+  // Fungsi untuk mereset timer saat ada aktivitas
+  const resetInactivityTimer = useCallback(() => {
+    setLastActivity(Date.now());
+  }, []);
+
+  // Fungsi untuk memeriksa waktu tidak aktif
+  const checkInactivity = useCallback(() => {
+    const currentTime = Date.now();
+    const timeSinceLastActivity = currentTime - lastActivity;
+    console.log(`Pengecekan inaktivitas: ${Math.round(timeSinceLastActivity/1000)} detik berlalu dari aktivitas terakhir`);
+    
+    // Jika tidak ada aktivitas selama periode yang ditentukan, logout
+    if (timeSinceLastActivity > INACTIVITY_PERIOD) {
+      console.log(`Pengguna tidak aktif selama ${INACTIVITY_PERIOD/60000} menit, melakukan logout otomatis`);
+      logout();
+    }
+  }, [lastActivity, INACTIVITY_PERIOD, logout]);
+
+  // Fetch data admin
+  const fetchAdminData = useCallback(async () => {
     try {
       const adminId = localStorage.getItem("adminId");
       if (!adminId) {
         throw new Error("Admin ID tidak ditemukan");
       }
+      
       const response = await axios.get(`/api/admin/${adminId}`);
       setAdmin({
         id: response.data.id,
@@ -113,7 +67,61 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  // useEffect untuk menangani auto-logout
+  useEffect(() => {
+    // Setup event listener untuk aktivitas pengguna
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    
+    // Tambahkan event listener untuk setiap jenis event
+    events.forEach(event => {
+      window.addEventListener(event, resetInactivityTimer);
+    });
+    
+    // Inisialisasi waktu aktivitas terakhir
+    console.log('Inisialisasi timer aktivitas:', new Date().toISOString());
+    setLastActivity(Date.now());
+    
+    // Setup interval untuk memeriksa inaktivitas
+    const inactivityCheckInterval = setInterval(checkInactivity, INACTIVITY_CHECK_INTERVAL);
+    
+    // Cleanup saat komponen unmount
+    return () => {
+      // Hapus semua event listener
+      events.forEach(event => {
+        window.removeEventListener(event, resetInactivityTimer);
+      });
+      
+      // Clear interval
+      clearInterval(inactivityCheckInterval);
+    };
+  }, [resetInactivityTimer, checkInactivity, INACTIVITY_CHECK_INTERVAL]);
+
+  // useEffect untuk fetch data admin dan pengecekan autentikasi
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    
+    if (!token) {
+      router.push("/");
+      return;
+    }
+    
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    
+    const adminId = localStorage.getItem("adminId");
+    const adminUsername = localStorage.getItem("adminUsername");
+    
+    if (adminId && adminUsername) {
+      setAdmin({
+        id: Number(adminId),
+        username: adminUsername,
+      });
+      setLoading(false);
+    } else {
+      fetchAdminData();
+    }
+  }, [router, fetchAdminData]);
 
   if (loading) {
     return (
@@ -141,12 +149,12 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-
+      
       <h2 className="text-lg font-semibold text-gray-800 mb-4">
         Grafik Visitor Website
       </h2>
       <SimpleLineChart />
-      <br></br>
+      <br />
       <ChartTop />
     </AdminLayout>
   );

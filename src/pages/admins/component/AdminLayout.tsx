@@ -17,6 +17,7 @@ import {
   KeyIcon,
   CheckCircleIcon,
   XMarkIcon,
+   ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
 import ChangePasswordModal from "../component/ChagePasswordModal";
 
@@ -239,26 +240,24 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         } ${item.current ? "text-blue-500" : "text-gray-500"}`}
                       />
                     </button>
-                    <div
-                      className={`overflow-hidden transition-all duration-300 ${
-                        contentMenuOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
-                      }`}
-                    >
-                      <div className="pl-12 py-2 space-y-2">
-                        <Link
-                          href="/admins/content/create"
-                          className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900"
-                        >
-                          Create
-                        </Link>
-                        <Link
-                          href="/admins/content/read"
-                          className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900"
-                        >
-                          Read
-                        </Link>
-                      </div>
-                    </div>
+                  <div className={`overflow-hidden transition-all duration-300 ${
+  contentMenuOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+}`}>
+  <div className="pl-11 py-2 space-y-1">
+    <Link href="/admins/content/create" 
+      className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900">
+      Tambah Konten
+    </Link>
+    <Link href="/admins/content/create-report"
+      className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900">
+      Tambah Laporan
+    </Link>
+    <Link href="/admins/content/read"
+      className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900">
+      Daftar Content
+    </Link>
+  </div>
+</div>
                   </>
                 ) : (
                   <Link
@@ -377,26 +376,24 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           } ${item.current ? "text-blue-500" : "text-gray-500"}`}
                         />
                       </button>
-                      <div
-                        className={`overflow-hidden transition-all duration-300 ${
-                          contentMenuOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
-                        }`}
-                      >
-                        <div className="pl-11 py-2 space-y-1">
-                          <Link
-                            href="/admins/content/create"
-                            className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900"
-                          >
-                            Create
-                          </Link>
-                          <Link
-                            href="/admins/content/read"
-                            className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900"
-                          >
-                            Read
-                          </Link>
-                        </div>
-                      </div>
+                      <div className={`overflow-hidden transition-all duration-300 ${
+  contentMenuOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+}`}>
+  <div className="pl-11 py-2 space-y-1">
+    <Link href="/admins/content/create" 
+      className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900">
+      Tambah Konten
+    </Link>
+    <Link href="/admins/content/create-report"
+      className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900">
+      Tambah Laporan
+    </Link>
+    <Link href="/admins/content/read"
+      className="block px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-100 hover:text-gray-900">
+      Daftar Content
+    </Link>
+  </div>
+</div>
                     </>
                   ) : (
                     <Link

@@ -35,7 +35,7 @@ const SimpleLineChart: React.FC = () => {
   const [visitData, setVisitData] = useState<VisitData[]>([]);
   const [ipDetails, setIpDetails] = useState<IpVisitDetail[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [ipLoading, setIpLoading] = useState<boolean>(false);
+  // const [ipLoading, setIpLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -170,16 +170,16 @@ const SimpleLineChart: React.FC = () => {
   ];
 
   // Fungsi untuk memformat tanggal
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('id-ID', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
+  // const formatDate = (dateString: string) => {
+  //   const date = new Date(dateString);
+  //   return new Intl.DateTimeFormat('id-ID', {
+  //     day: '2-digit',
+  //     month: '2-digit',
+  //     year: 'numeric',
+  //     hour: '2-digit',
+  //     minute: '2-digit'
+  //   }).format(date);
+  // };
 
   if (loading && viewMode !== 'ipDetails') {
     return (
@@ -285,12 +285,12 @@ const SimpleLineChart: React.FC = () => {
           >
             Pengunjung Unik
           </button>
-          <button
+          {/* <button
             onClick={() => handleViewModeChange('ipDetails')}
             className={`px-4 py-2 rounded ${viewMode === 'ipDetails' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}
           >
             Detail IP Address
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -336,7 +336,7 @@ const SimpleLineChart: React.FC = () => {
       )}
 
       {/* Tampilan tabel untuk detail IP Address */}
-      {viewMode === 'ipDetails' && (
+      {/* {viewMode === 'ipDetails' && (
         <div>
           {ipLoading ? (
             <div className="h-80 flex items-center justify-center">
@@ -374,7 +374,7 @@ const SimpleLineChart: React.FC = () => {
             </div>
           )}
         </div>
-      )}
+      )} */}
     </div>
   );
 };

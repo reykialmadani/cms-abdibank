@@ -39,43 +39,51 @@ export default function ContentList() {
   const router = useRouter();
   
   // Fetch content items dari API dengan pagination dan search
-  const fetchContentItems = useCallback(async (page = 1, searchQuery = search) => {
-    try {
-      setLoading(true);
-      setError("");
-      
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/");
-        return;
-      }
-      
-      const response = await axios.get("/api/content", {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        params: {
-          page,
-          search: searchQuery,
-          per_page: pagination.per_page,
-        },
-      });
-      
-      setContentItems(response.data.data);
-      setPagination({
-        current_page: response.data.current_page,
-        last_page: response.data.last_page,
-        per_page: response.data.per_page,
-        total: response.data.total,
-      });
-    } catch (err) {
-      console.error("Error fetching content items:", err);
-      setError("Terjadi kesalahan saat mengambil data content");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+const fetchContentItems = useCallback(async (page = 1, searchQuery = search) => {
+  try {
+    setLoading(true);
+    setError("");
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/");
+      return;
     }
-  }, [pagination.per_page, router, search]);
+
+    const response = await axios.get("/api/content", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      params: {
+        page,
+        search: searchQuery,
+        per_page: pagination.per_page,
+      },
+    });
+
+    // Urutkan berdasarkan submenu_id secara ascending
+    const sortedContent = response.data.data.sort(
+      (a: ContentItem, b: ContentItem) => a.sub_menu_id - b.sub_menu_id
+    );
+
+    // Set data yang telah diurutkan
+    setContentItems(sortedContent);
+
+    setPagination({
+      current_page: response.data.current_page,
+      last_page: response.data.last_page,
+      per_page: response.data.per_page,
+      total: response.data.total,
+    });
+  } catch (err) {
+    console.error("Error fetching content items:", err);
+    setError("Terjadi kesalahan saat mengambil data content");
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}, [pagination.per_page, router, search]);
+
   
   // Initial fetch saat komponen di-mount
   useEffect(() => {

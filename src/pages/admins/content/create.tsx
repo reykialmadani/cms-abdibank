@@ -1,3 +1,4 @@
+
 import { useState, useEffect, FormEvent } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -29,108 +30,58 @@ export default function CreateContent() {
   const [success, setSuccess] = useState<string>("");
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
     {}
+    
   );
-
-  // State untuk laporan
-  const [isReportSubMenu, setIsReportSubMenu] = useState<boolean>(false);
-  const [reportType, setReportType] = useState<string | null>(null);
-  const [reportYear, setReportYear] = useState<string | null>(null);
-  const [reportQuarter, setReportQuarter] = useState<string | null>(null);
 
   const router = useRouter();
 
   // Fetch sub menu options dari API saat komponen mount
-  useEffect(() => {
-    const fetchSubMenuOptions = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          router.push("/");
-          return;
-        }
-        const response: AxiosResponse<{
-          data: { id: number; sub_menu_name: string }[];
-        }> = await axios.get("/api/subMenu", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const options = response.data.data.map((subMenu) => ({
+useEffect(() => {
+  const fetchSubMenuOptions = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/");
+        return;
+      }
+      const response: AxiosResponse<{ data: { id: number; sub_menu_name: string }[] }> = await axios.get("/api/subMenu", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      // Filter out submenu yang mengandung kata "laporan"
+      const options = response.data.data
+        .filter((subMenu) => !subMenu.sub_menu_name.toLowerCase().includes('laporan'))
+        .map((subMenu) => ({
           id: subMenu.id,
           name: subMenu.sub_menu_name,
         }));
-        setSubMenuOptions(options);
-      } catch (err) {
-        console.error("Error fetching sub menu options:", err);
-      }
-    };
-
-    fetchSubMenuOptions();
-  }, [router]);
-
-  // Cek apakah sub menu yang dipilih adalah laporan
-  useEffect(() => {
-    if (selectedSubMenu) {
-      const selectedOption = subMenuOptions.find(
-        (option) => option.id === selectedSubMenu
-      );
-      // Periksa apakah nama sub menu mengandung kata "laporan" (case insensitive)
-      const isReport = selectedOption
-        ? selectedOption.name.toLowerCase().includes("laporan")
-        : false;
-      setIsReportSubMenu(isReport);
-      if (!isReport) {
-        setReportType(null);
-        setReportYear(null);
-        setReportQuarter(null);
-      }
-    } else {
-      setIsReportSubMenu(false);
-      setReportType(null);
-      setReportYear(null);
-      setReportQuarter(null);
+        
+      setSubMenuOptions(options);
+    } catch (err) {
+      console.error("Error fetching sub menu options:", err);
     }
-  }, [selectedSubMenu, subMenuOptions]);
+  };
 
-  // Generate tahun untuk pilihan (2021-2025)
-  const yearOptions = Array.from({ length: 5 }, (_, i) => String(2021 + i));
-
-  // Generate opsi triwulan
-  const quarterOptions = ["1", "2", "3", "4"];
-
+  fetchSubMenuOptions();
+}, [router]);
   // Validasi form sebelum submit
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
 
-    if (!isReportSubMenu && title.trim().length < 5) {
+    if (title.trim().length < 5) {
       errors.title = "Judul harus minimal 5 karakter";
     }
-
     if (!selectedSubMenu) {
       errors.sub_menu_id = "Sub menu harus dipilih";
-    }
-
-    // Validasi spesifik untuk sub menu laporan
-    if (isReportSubMenu) {
-      if (!reportType) {
-        errors.reportType = "Jenis laporan harus dipilih";
-      }
-
-      if (!reportYear) {
-        errors.reportYear = "Tahun laporan harus dipilih";
-      }
-
-      // Validasi triwulan jika jenis laporan adalah triwulan
-      if (reportType === "triwulan" && !reportQuarter) {
-        errors.reportQuarter = "Triwulan harus dipilih";
-      }
     }
 
     // Validasi deskripsi menggunakan HTML dari React Quill
     if (!description || getTextContentLength(description) < 20) {
       errors.description = "Deskripsi harus minimal 20 karakter";
     }
-
+    
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -145,29 +96,11 @@ export default function CreateContent() {
     // Membuat objek data
     const jsonData: Record<string, any> = {
       sub_menu_id: selectedSubMenu,
+      title: title,
       description: description,
       required_documents: requiredDocuments,
       status: status,
     };
-
-    // Set judul dan data laporan berdasarkan jenis laporan
-    if (isReportSubMenu && reportType && reportYear) {
-      // Untuk laporan tahunan
-      if (reportType === "tahunan") {
-        jsonData.title = `LAPORAN TAHUNAN ${reportYear}`;
-        jsonData.report_type = "Tahunan";
-        jsonData.report_year = reportYear;
-      }
-      // Untuk laporan triwulan
-      else if (reportType === "triwulan" && reportQuarter) {
-        jsonData.title = `LAPORAN TRIWULAN ${reportQuarter} TAHUN ${reportYear}`;
-        jsonData.report_type = "Triwulan";
-        jsonData.report_year = reportYear;
-        jsonData.report_quarter = reportQuarter;
-      }
-    } else {
-      jsonData.title = title;
-    }
 
     // Ambil user ID dari local storage jika tersedia
     const userId = localStorage.getItem("userId");
@@ -177,7 +110,6 @@ export default function CreateContent() {
 
     // Debug info
     console.log("Submitting data:", jsonData);
-
     return jsonData;
   };
 
@@ -242,126 +174,17 @@ export default function CreateContent() {
     }
   };
 
-  // Render komponen Report Options
-  const renderReportOptions = () => {
-    if (!isReportSubMenu) return null;
-
-    return (
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Jenis Laporan
-          </label>
-          <select
-            className={`
-              text-black mt-1 block w-full py-2 px-3 border
-              ${
-                validationErrors.reportType
-                  ? "border-red-300"
-                  : "border-gray-300"
-              }
-              bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm
-            `}
-            value={reportType || ""}
-            onChange={(e) => {
-              setReportType(e.target.value);
-              if (e.target.value !== "triwulan") {
-                setReportQuarter(null);
-              }
-            }}
-          >
-            <option value="">Pilih Jenis Laporan</option>
-            <option value="triwulan">Laporan Triwulan</option>
-            <option value="tahunan">Laporan Tahunan</option>
-          </select>
-          {validationErrors.reportType && (
-            <p className="mt-2 text-sm text-red-600">
-              {validationErrors.reportType}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Tahun Laporan
-          </label>
-          <select
-            className={`
-              text-black mt-1 block w-full py-2 px-3 border
-              ${
-                validationErrors.reportYear
-                  ? "border-red-300"
-                  : "border-gray-300"
-              }
-              bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm
-            `}
-            value={reportYear || ""}
-            onChange={(e) => setReportYear(e.target.value)}
-          >
-            <option value="">Pilih Tahun</option>
-            {yearOptions.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-          {validationErrors.reportYear && (
-            <p className="mt-2 text-sm text-red-600">
-              {validationErrors.reportYear}
-            </p>
-          )}
-        </div>
-
-        {/* Opsi Triwulan (hanya muncul jika jenis laporan adalah triwulan) */}
-        {reportType === "triwulan" && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Triwulan
-            </label>
-            <select
-              className={`
-                text-black mt-1 block w-full py-2 px-3 border
-                ${
-                  validationErrors.reportQuarter
-                    ? "border-red-300"
-                    : "border-gray-300"
-                }
-                bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm
-              `}
-              value={reportQuarter || ""}
-              onChange={(e) => setReportQuarter(e.target.value)}
-            >
-              <option value="">Pilih Triwulan</option>
-              {quarterOptions.map((quarter) => (
-                <option key={quarter} value={quarter}>
-                  {quarter}
-                </option>
-              ))}
-            </select>
-            {validationErrors.reportQuarter && (
-              <p className="mt-2 text-sm text-red-600">
-                {validationErrors.reportQuarter}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <AdminLayout>
       <Head>
         <title>Tambah Content Baru - Admin Dashboard</title>
       </Head>
-
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <h1 className="text-2xl font-semibold text-gray-900">
             Tambah Content Baru
           </h1>
         </div>
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="py-4">
             {/* Card container */}
@@ -381,17 +204,12 @@ export default function CreateContent() {
                     validationError={validationErrors.sub_menu_id}
                   />
 
-                  {/* Report Options (Conditional) */}
-                  {renderReportOptions()}
-
-                  {/* Title (kondisional berdasarkan apakah sub menu adalah laporan) */}
-                  {!isReportSubMenu && (
-                    <TitleInput
-                      title={title}
-                      setTitle={setTitle}
-                      validationError={validationErrors.title}
-                    />
-                  )}
+                  {/* Title */}
+                  <TitleInput
+                    title={title}
+                    setTitle={setTitle}
+                    validationError={validationErrors.title}
+                  />
 
                   {/* React Quill Editor */}
                   <div>
