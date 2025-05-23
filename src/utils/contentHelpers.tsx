@@ -1,5 +1,5 @@
 // utils/contentHelpers.tsx
-import React from 'react';
+import React, { JSX } from 'react';
 import { ListItem } from "@/types/content";
 
 // Convert nested list structure to HTML
