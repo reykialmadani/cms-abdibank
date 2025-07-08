@@ -1,70 +1,74 @@
-// /api/report.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Tangani metode HTTP yang berbeda tanpa proteksi token
     switch (req.method) {
       case "GET":
         return handleGet(req, res);
       case "POST":
         return handlePost(req, res);
       default:
-        return res
-          .status(405)
-          .json({ success: false, message: "Metode tidak diizinkan" });
+        return res.status(405).json({
+          success: false,
+          message: "Metode tidak diizinkan",
+        });
     }
   } catch (error) {
     console.error("Error in /api/report:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Terjadi kesalahan pada server" });
+    return res.status(500).json({
+      success: false,
+      message: "Terjadi kesalahan pada server",
+    });
   }
 }
 
-// Fungsi untuk menangani permintaan GET
+interface ReportQuery extends Record<string, string | string[] | undefined> {
+  page?: string;
+  limit?: string;
+  search?: string;
+  status?: string;
+  report_type?: string;
+}
+
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   const {
     page = "1",
     limit = "10",
     search = "",
     status = "",
-    report_type = "", // Parameter baru untuk tipe laporan
-  } = req.query;
+    report_type = "",
+  } = req.query as ReportQuery;
 
-  const pageNumber = parseInt(page as string, 10);
-  const limitNumber = parseInt(limit as string, 10);
+  const pageNumber = parseInt(page, 10);
+  const limitNumber = parseInt(limit, 10);
   const skip = (pageNumber - 1) * limitNumber;
 
-  // Bangun kondisi filter
-  const where: any = {
+  const where: Record<string, unknown> = {
     deleted_at: null,
-    title: { contains: search as string, mode: "insensitive" },
+    title: {
+      contains: search,
+      mode: "insensitive",
+    },
   };
 
-  // Filter berdasarkan status jika disediakan
   if (status === "active") {
     where.status = true;
   } else if (status === "inactive") {
     where.status = false;
   }
 
-  // Filter berdasarkan tipe laporan
   if (report_type) {
     switch (report_type) {
       case "tahunan":
         where.report_year = { not: null };
-        where.report_type = null; // Asumsi laporan tahunan tidak memiliki month/report_type
+        where.report_type = null;
         break;
       case "bulanan":
-        where.report_type = { not: null }; // Laporan bulanan memiliki bulan
-        where.report_year = { not: null }; // Dan juga tahun
+        where.report_type = { not: null };
+        where.report_year = { not: null };
         break;
       case "tata-kelola":
         where.report_type = "tata-kelola";
@@ -80,7 +84,10 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
         break;
     }
   } else {
-    where.OR = [{ report_type: { not: null } }, { report_year: { not: null } }];
+    where.OR = [
+      { report_type: { not: null } },
+      { report_year: { not: null } },
+    ];
   }
 
   try {
@@ -99,8 +106,8 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
     const formattedReports = reports.map((report) => {
       const { admin, sub_menu, ...reportData } = report;
-
       let kategori = "";
+
       if (report.report_type === "tata-kelola") {
         kategori = "Tata Kelola";
       } else if (report.report_type === "publikasi") {
@@ -114,8 +121,8 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
       return {
         ...reportData,
         kategori,
-        updater: admin?.username || null,
-        sub_menu_name: sub_menu?.sub_menu_name || null,
+        updater: admin?.username ?? null,
+        sub_menu_name: sub_menu?.sub_menu_name ?? null,
       };
     });
 
@@ -138,7 +145,17 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-// Fungsi untuk menangani permintaan POST (jika tetap ingin dipakai tanpa proteksi)
+interface ReportPostBody {
+  sub_menu_id: string;
+  title: string;
+  month?: string;
+  year?: string;
+  report_type?: "tahunan" | "bulanan" | "tata-kelola" | "publikasi" | null;
+  required_documents?: string;
+  status?: boolean | number;
+  updated_by?: string | number | null;
+}
+
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   try {
     const {
@@ -146,11 +163,11 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       title,
       month,
       year,
-      report_type, // Bisa berisi: null, 'tata-kelola', 'publikasi'
+      report_type,
       required_documents,
       status,
       updated_by = null,
-    } = req.body;
+    }: ReportPostBody = req.body;
 
     if (!sub_menu_id || !title) {
       return res.status(400).json({
@@ -167,17 +184,26 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (report_type === "tahunan" && !year) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Laporan tahunan memerlukan tahun" });
+      return res.status(400).json({
+        success: false,
+        message: "Laporan tahunan memerlukan tahun",
+      });
     }
 
-    const reportData: any = {
-      sub_menu_id: parseInt(sub_menu_id),
+    const reportData: {
+      sub_menu_id: number;
+      title: string;
+      required_documents?: string;
+      status: boolean;
+      updated_by: number | null;
+      report_type?: string | null;
+      report_year?: string;
+    } = {
+      sub_menu_id: parseInt(sub_menu_id, 10),
       title,
       required_documents,
-      status: status === 1 || status === true,
-      updated_by: updated_by ? parseInt(updated_by.toString()) : null,
+      status: status === true || status === 1,
+      updated_by: updated_by ? parseInt(updated_by.toString(), 10) : null,
     };
 
     switch (report_type) {
@@ -191,13 +217,11 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
       case "tata-kelola":
       case "publikasi":
         reportData.report_type = report_type;
-        reportData.report_year = year || new Date().getFullYear();
+        reportData.report_year = year || new Date().getFullYear().toString();
         break;
     }
 
-    const newReport = await prisma.content.create({
-      data: reportData,
-    });
+    const newReport = await prisma.content.create({ data: reportData });
 
     return res.status(201).json({
       success: true,

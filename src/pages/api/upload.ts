@@ -30,7 +30,7 @@ export default async function handler(
   try {
     await fs.access(uploadDir);
   } catch (error) {
-    console.log("Creating upload directory...");
+    console.log("Creating upload directory...",error);
     await fs.mkdir(uploadDir, { recursive: true });
   }
 
@@ -41,7 +41,7 @@ export default async function handler(
     maxFileSize: 5 * 1024 * 1024, // 5MB
   });
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     // Parse form data
     form.parse(req, async (err, fields, files) => {
       console.log("Form parsing complete");

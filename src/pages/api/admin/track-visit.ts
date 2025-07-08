@@ -89,7 +89,6 @@ export default async function handler(
         },
       });
 
-      // Jika sudah ada kunjungan dalam 1 jam terakhir, jangan buat record baru
       if (existingVisit) {
         return res.status(200).json({
           message:
@@ -98,7 +97,6 @@ export default async function handler(
         });
       }
 
-      // Buat record kunjungan baru jika belum ada sebelumnya dalam 1 jam terakhir
       const visit = await prisma.visit.create({
         data: {
           sessionId: sessionId || "",
